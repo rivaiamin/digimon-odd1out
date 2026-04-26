@@ -186,15 +186,17 @@
 	.art {
 		position: relative;
 		border-radius: 12px;
-		background: linear-gradient(135deg, rgba(26, 28, 44, 1), rgba(0, 68, 255, 0.22));
+		/* background: linear-gradient(135deg, rgba(26, 28, 44, 1), rgba(0, 68, 255, 0.22)); */
+		background: white;
 		border: 1px solid rgba(0, 242, 255, 0.18);
 		overflow: hidden;
+		/* padding: 12px; */
 	}
 
 	.art img {
 		width: 100%;
 		height: 100%;
-		object-fit: cover;
+		object-fit: contain;
 		display: block;
 		user-select: none;
 		pointer-events: none;
