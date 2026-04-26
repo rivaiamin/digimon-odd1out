@@ -1,0 +1,81 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+
+@theme {
+	--font-sans: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+	--font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+	--color-digital-cyan: #00f2ff;
+	--color-digital-blue: #0044ff;
+	--color-digital-pink: #ff007a;
+	--color-digital-gold: #ff9d00;
+}
+
+@layer base {
+	html,
+	body {
+		height: 100%;
+		margin: 0;
+		padding: 0;
+		overflow: hidden;
+		background-color: #05070a;
+		color: #e0e0e0;
+		font-family: var(--font-sans);
+	}
+}
+
+.digital-grid {
+	position: absolute;
+	inset: 0;
+	z-index: 0;
+	opacity: 0.5;
+	background-image:
+		linear-gradient(rgba(0, 242, 255, 0.06) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(0, 242, 255, 0.06) 1px, transparent 1px);
+	background-size: 64px 64px;
+	mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 1) 20%, transparent 70%);
+}
+
+.glow-orb {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	width: 600px;
+	height: 600px;
+	transform: translate(-50%, -50%);
+	z-index: 0;
+	background:
+		radial-gradient(circle at center, rgba(0, 242, 255, 0.16), transparent 60%),
+		radial-gradient(circle at 30% 60%, rgba(255, 0, 122, 0.12), transparent 55%);
+	filter: blur(6px);
+}
+
+.scanline {
+	position: absolute;
+	inset: 0;
+	z-index: 50;
+	pointer-events: none;
+	opacity: 0.05;
+	background: repeating-linear-gradient(
+		to bottom,
+		rgba(255, 255, 255, 0.2) 0px,
+		rgba(255, 255, 255, 0.2) 1px,
+		transparent 3px,
+		transparent 7px
+	);
+	mix-blend-mode: overlay;
+	animation: scan 8s linear infinite;
+}
+
+.skew-ui {
+	transform: skewX(-12deg);
+}
+
+@keyframes scan {
+	from {
+		transform: translateY(-10%);
+	}
+	to {
+		transform: translateY(10%);
+	}
+}
