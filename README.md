@@ -1,5 +1,7 @@
 # Digi‑Odd One Out (Svelte)
 
+![Digi‑Odd One Out preview](docs/preview.jpg)
+
 **Digi‑Odd One Out** is an interactive web puzzle game where you pick the “odd” Digimon card out of four. Each round is generated from Digimon lore data (Attribute, Level, Type, Field): **three cards share a value** and **one differs**.
 
 This Svelte app uses **SvelteKit + Vite**, **Threlte/Three.js** for a 3D vibe, **Tailwind CSS**, and **SQLite (better-sqlite3) via Drizzle** for local persistence.
@@ -47,4 +49,8 @@ pnpm db:push
 
 - **Game loop**: deal → guess → reveal → repeat until out of lives.
 - **Content**: puzzles are driven by Digimon properties (Attribute/Level/Type/Field).
+
+## Thanks
+
+Digimon data is sourced from [DAPI: Digimon API](https://digi-api.com). Thank you for providing and maintaining the database.
 
