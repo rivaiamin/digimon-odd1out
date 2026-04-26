@@ -9,6 +9,8 @@
 	import DigiCardDom from '$lib/components/DigiCardDom.svelte';
 	import { computeHandLayout } from '$lib/ui/handLayout';
 
+	let started = $state(false);
+
 	let puzzle = $state<Puzzle | null>(null);
 	let loading = $state(false);
 	let score = $state(0);
@@ -73,10 +75,12 @@
 		fetchNewPuzzle();
 	}
 
-	onMount(() => {
-		fetchNewPuzzle();
-		return () => clearTimers();
-	});
+	function startGame() {
+		started = true;
+		restartGame();
+	}
+
+	onMount(() => () => clearTimers());
 
 	const logicText = $derived(
 		gameState === 'revealing' && puzzle
@@ -180,6 +184,22 @@
 	<div class="digital-grid" aria-hidden="true"></div>
 	<div class="glow-orb" aria-hidden="true"></div>
 
+	{#if !started}
+		<div class="overlay home" role="dialog" aria-modal="true" in:fade={{ duration: 180 }}>
+			<div class="panel home-panel" in:scale={{ start: 0.98, duration: 220, easing: cubicOut }}>
+				<h1 class="home-title">DIGI-ODD ONE OUT</h1>
+				<p class="home-brief">
+					Four Digimon enter the arena. Three share a hidden trait. One is the anomaly. Identify the odd
+					one out to stabilize the loop.
+				</p>
+
+				<button class="start" type="button" onclick={startGame}>
+					<span>Start</span>
+				</button>
+			</div>
+		</div>
+	{/if}
+
 	<!-- Card Viewport (DOM/CSS 3D) -->
 	<div class="viewport">
 		<div class="board" aria-label="Card board" bind:this={boardEl}>
@@ -201,7 +221,7 @@
 	</div>
 
 	<!-- UI Overlay: Header -->
-	<header class="hud header">
+	<header class="hud header" class:is-hidden={!started}>
 		<div
 			class="title"
 			in:fly={{ x: -20, duration: 420, easing: quintOut }}
@@ -233,7 +253,7 @@
 	</header>
 
 	<!-- UI Overlay: Footer -->
-	<footer class="hud footer">
+	<footer class="hud footer" class:is-hidden={!started}>
 		<div class="log">
 			<p class="log-label">LOGIC_LOG_V2.04</p>
 			<p class="log-text">{logicText}</p>
@@ -266,7 +286,7 @@
 	</footer>
 
 	<!-- Loading Overlay -->
-	{#if loading}
+	{#if started && loading}
 		<div
 			class="overlay loading"
 			role="status"
@@ -285,7 +305,7 @@
 	{/if}
 
 	<!-- Game Over Overlay -->
-	{#if gameState === 'gameOver'}
+	{#if started && gameState === 'gameOver'}
 		<div
 			class="overlay gameover"
 			role="dialog"
@@ -315,7 +335,7 @@
 	<!-- Scanlines -->
 	<div class="scanline" aria-hidden="true"></div>
 
-	{#if isMobile && isPortrait}
+	{#if started && isMobile && isPortrait}
 		<div class="overlay rotate" role="dialog" aria-modal="true">
 			<div class="panel rotate-panel" in:scale={{ start: 0.98, duration: 180, easing: cubicOut }}>
 				<h2>ROTATE DEVICE</h2>
@@ -367,6 +387,11 @@
 		position: absolute;
 		inset-inline: 3rem;
 		z-index: 20;
+		pointer-events: none;
+	}
+
+	.hud.is-hidden {
+		opacity: 0;
 		pointer-events: none;
 	}
 
@@ -544,6 +569,71 @@
 		align-items: center;
 		justify-content: center;
 		padding: 1.5rem;
+	}
+
+	.home {
+		z-index: 90;
+		background: rgba(5, 7, 10, 0.92);
+		backdrop-filter: blur(28px);
+	}
+
+	.home-panel {
+		max-width: 720px;
+		width: 100%;
+		text-align: center;
+	}
+
+	.home-title {
+		font-size: clamp(2.8rem, 6vw, 4.75rem);
+		font-weight: 900;
+		font-style: italic;
+		letter-spacing: -0.05em;
+		color: white;
+		text-decoration: underline;
+		text-decoration-color: #00f2ff;
+		text-decoration-thickness: 4px;
+		text-underline-offset: 12px;
+	}
+
+	.home-brief {
+		margin-top: 1.25rem;
+		margin-bottom: 3rem;
+		font-size: clamp(1rem, 1.7vw, 1.15rem);
+		line-height: 1.7;
+		font-weight: 650;
+		color: rgb(148 163 184);
+	}
+
+	.start {
+		width: min(480px, 100%);
+		padding: 1.25rem 1rem;
+		background: #00f2ff;
+		color: black;
+		font-weight: 900;
+		font-size: 1.25rem;
+		border-radius: 16px;
+		transform: skewX(-12deg);
+		cursor: pointer;
+		transition:
+			transform 120ms ease,
+			background-color 180ms ease;
+		box-shadow: 0 20px 40px -10px rgba(0, 242, 255, 0.4);
+		pointer-events: auto;
+	}
+
+	.start:hover {
+		background: white;
+	}
+
+	.start:active {
+		transform: skewX(-12deg) scale(0.98);
+	}
+
+	.start span {
+		display: block;
+		transform: skewX(12deg);
+		text-transform: uppercase;
+		letter-spacing: -0.02em;
 	}
 
 	.loading {
