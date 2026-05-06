@@ -4,4 +4,3 @@
 	// Enables raycast-based pointer/click events for Threlte objects
 	interactivity();
 </script>
-

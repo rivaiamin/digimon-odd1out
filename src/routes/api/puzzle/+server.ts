@@ -1,11 +1,7 @@
 import { json } from '@sveltejs/kit';
-import { startDigimonSync } from '$lib/server/digimon/sync';
 import { generatePuzzle } from '$lib/server/digimon/puzzle';
 
 export function GET() {
-	// Ensure background sync has started (idempotent).
-	startDigimonSync();
-
 	try {
 		const result = generatePuzzle();
 		if ('error' in result) {

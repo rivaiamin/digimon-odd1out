@@ -133,7 +133,8 @@
 	}
 
 	.card-back {
-		background: radial-gradient(circle at top left, rgba(0, 242, 255, 0.14), transparent 55%),
+		background:
+			radial-gradient(circle at top left, rgba(0, 242, 255, 0.14), transparent 55%),
 			linear-gradient(180deg, rgba(10, 15, 25, 0.95), rgba(5, 7, 10, 0.95));
 		border: 2px solid rgba(0, 242, 255, 0.35);
 		box-shadow: inset 0 0 0 1px rgba(0, 242, 255, 0.08);
@@ -240,4 +241,3 @@
 		}
 	}
 </style>
-

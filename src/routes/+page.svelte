@@ -99,7 +99,9 @@
 		isMobile =
 			/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
 			('ontouchstart' in window && window.innerWidth < 1024);
-		isPortrait = window.matchMedia?.('(orientation: portrait)')?.matches ?? window.innerHeight > window.innerWidth;
+		isPortrait =
+			window.matchMedia?.('(orientation: portrait)')?.matches ??
+			window.innerHeight > window.innerWidth;
 	}
 
 	async function requestFullscreenLandscape() {
@@ -144,8 +146,7 @@
 		const cardWidth = Math.max(minW, Math.min(maxW, estimatedW));
 		const cardHeight = (cardWidth * 340) / 240;
 		const cardXSpacingPx = cardWidth * 1.12;
-		const groupYOffsetPx =
-			viewportSize.height < 480 ? -20 : SCENE.cardsGroupPosition[1] * -80;
+		const groupYOffsetPx = viewportSize.height < 480 ? -20 : SCENE.cardsGroupPosition[1] * -80;
 
 		return computeHandLayout(cards.length, {
 			width: viewportSize.width,
@@ -189,8 +190,8 @@
 			<div class="panel home-panel" in:scale={{ start: 0.98, duration: 220, easing: cubicOut }}>
 				<h1 class="home-title">DIGI-ODD ONE OUT</h1>
 				<p class="home-brief">
-					Four Digimon enter the arena. Three share a hidden trait. One is the anomaly. Identify the odd
-					one out to stabilize the loop.
+					Four Digimon enter the arena. Three share a hidden trait. One is the anomaly. Identify the
+					odd one out to stabilize the loop.
 				</p>
 
 				<button class="start" type="button" onclick={startGame}>

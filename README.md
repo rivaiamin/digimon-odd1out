@@ -53,4 +53,3 @@ pnpm db:push
 ## Thanks
 
 Digimon data is sourced from [DAPI: Digimon API](https://digi-api.com). Thank you for providing and maintaining the database.
-

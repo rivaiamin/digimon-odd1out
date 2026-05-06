@@ -1,13 +1,7 @@
-import { getSqliteDb } from './db';
+import { getDigimonData } from './data';
 
 const CATEGORIES = ['attribute', 'level', 'type', 'field'] as const;
 type Category = (typeof CATEGORIES)[number];
-
-type DigimonRow = {
-	name: string;
-	image: string;
-} & Record<Category, string> &
-	Record<string, unknown>;
 
 const CATEGORY_NAMES: Record<Category, string> = {
 	attribute: 'Attribute',
@@ -16,44 +10,52 @@ const CATEGORY_NAMES: Record<Category, string> = {
 	field: 'Field'
 };
 
+function isUsableValue(v: string | null | undefined) {
+	return !!v && v !== 'Unknown';
+}
+
+function pickRandom<T>(arr: T[]) {
+	return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function shuffle<T>(arr: T[]) {
+	return arr.slice().sort(() => Math.random() - 0.5);
+}
+
 export function generatePuzzle() {
-	const db = getSqliteDb();
+	const all = getDigimonData();
+	if (all.length < 10) {
+		return { error: 'Not enough data. Run `pnpm export:digimon` first.' as const };
+	}
+
 	const category = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
 
-	// 1) Pick a random category value that has enough rows
-	const valueRow = db
-		.prepare(
-			`
-      SELECT ${category} as val FROM digimon
-      WHERE ${category} != 'Unknown' AND ${category} != ''
-      GROUP BY ${category}
-      HAVING COUNT(*) >= 5
-      ORDER BY RANDOM() LIMIT 1
-    `
-		)
-		.get() as { val: string } | undefined;
-
-	if (!valueRow) {
-		return { error: 'Not enough data in DB. Please wait for sync.' as const };
+	// 1) Choose a random category value that has enough rows (>= 5)
+	const groups = new Map<string, typeof all>();
+	for (const d of all) {
+		const v = d[category];
+		if (!isUsableValue(v)) continue;
+		const existing = groups.get(v);
+		if (existing) existing.push(d);
+		else groups.set(v, [d]);
 	}
 
-	const connectionValue = valueRow.val;
-
-	// 2) Fetch 3 Digimon with this value
-	const sameGroup = db
-		.prepare(`SELECT * FROM digimon WHERE ${category} = ? ORDER BY RANDOM() LIMIT 3`)
-		.all(connectionValue) as DigimonRow[];
-
-	// 3) Fetch 1 Digimon with a different value
-	const oddOne = db
-		.prepare(
-			`SELECT * FROM digimon WHERE ${category} != ? AND ${category} != 'Unknown' AND ${category} != '' ORDER BY RANDOM() LIMIT 1`
-		)
-		.get(connectionValue) as DigimonRow | undefined;
-
-	if (sameGroup.length < 3 || !oddOne) {
-		return { error: 'Failed to generate puzzle with current data.' as const };
+	const eligibleValues = [...groups.entries()].filter(([, arr]) => arr.length >= 5).map(([v]) => v);
+	const connectionValue = pickRandom(eligibleValues);
+	if (!connectionValue) {
+		return { error: 'Not enough data to generate a puzzle.' as const };
 	}
+
+	// 2) Pick 3 digimon from that group
+	const sameGroup = shuffle(groups.get(connectionValue) ?? []).slice(0, 3);
+
+	// 3) Pick 1 digimon outside that group (usable values only)
+	const oddCandidates = all.filter(
+		(d) => isUsableValue(d[category]) && d[category] !== connectionValue
+	);
+	const oddOne = pickRandom(oddCandidates);
+
+	if (sameGroup.length < 3 || !oddOne) return { error: 'Failed to generate puzzle.' as const };
 
 	const cards = sameGroup.concat(oddOne).map((d) => ({
 		name: d.name,
@@ -63,7 +65,7 @@ export function generatePuzzle() {
 		categoryValue: d[category]
 	}));
 
-	const shuffled = cards.sort(() => Math.random() - 0.5);
+	const shuffled = shuffle(cards);
 	const answerIndex = shuffled.findIndex((c) => c.name === oddOne.name);
 
 	return {
