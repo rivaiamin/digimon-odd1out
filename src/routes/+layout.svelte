@@ -5,6 +5,7 @@
 	import { locales, localizeHref } from '$lib/paraglide/runtime';
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
+	import BackgroundMusicPlayer from '$lib/components/BackgroundMusicPlayer.svelte';
 
 	let { children } = $props();
 
@@ -53,6 +54,8 @@
 	<meta name="twitter:image" content={absoluteUrl(favicon)} />
 </svelte:head>
 {@render children()}
+
+<BackgroundMusicPlayer />
 
 <div style="display:none">
 	{#each locales as locale (locale)}
