@@ -12,6 +12,9 @@ declare global {
 
 interface ImportMetaEnv {
 	readonly PUBLIC_SITE_URL?: string;
+	readonly PUBLIC_BG_MUSIC_URL?: string;
+	readonly PUBLIC_BG_MUSIC_AUTOPLAY?: string;
+	readonly PUBLIC_BG_MUSIC_AUTOPLAY_MUTED?: string;
 }
 
 interface ImportMeta {

@@ -88,6 +88,8 @@
 			: 'Analyze the data nodes. Three entities share a structural compatibility tier. Identify the anomaly to resolve the loop.'
 	);
 
+	let showLogicLog = $state(false);
+
 	let viewportSize = $state({ width: 0, height: 0 });
 	let boardEl = $state<HTMLDivElement | null>(null);
 
@@ -229,7 +231,6 @@
 			out:fade={{ duration: 140 }}
 		>
 			<h1>DIGI-ODD ONE OUT</h1>
-			<p class="status">[ SYSTEM STATUS: {loading ? 'ANALYZING' : 'LIVE_CORE'} ]</p>
 		</div>
 
 		<div
@@ -255,12 +256,13 @@
 
 	<!-- UI Overlay: Footer -->
 	<footer class="hud footer" class:is-hidden={!started}>
-		<div class="log">
-			<p class="log-label">LOGIC_LOG_V2.04</p>
-			<p class="log-text">{logicText}</p>
+		<div class="footer-left">
+			<button class="log-btn" type="button" onclick={() => (showLogicLog = true)}>
+				View logic log
+			</button>
 		</div>
 
-		<div class="footer-right">
+		<div class="footer-right" aria-live="polite">
 			{#key gameState === 'revealing' ? 'next' : 'sync'}
 				{#if gameState === 'revealing'}
 					<button
@@ -270,7 +272,7 @@
 						in:fly={{ x: 10, duration: 200, easing: cubicOut }}
 						out:fly={{ x: -10, duration: 160, easing: cubicOut }}
 					>
-						INTIALIZE NEXT SEQUENCE
+						INITIALIZE NEXT SEQUENCE
 					</button>
 				{:else}
 					<div class="sync" in:fade={{ duration: 220 }} out:fade={{ duration: 140 }}>
@@ -285,6 +287,32 @@
 			{/key}
 		</div>
 	</footer>
+
+	{#if started && showLogicLog}
+		<div
+			class="overlay logic-log"
+			role="dialog"
+			aria-modal="true"
+			aria-label="Logic log"
+			tabindex="0"
+			onclick={(e) => {
+				if (e.currentTarget === e.target) showLogicLog = false;
+			}}
+			onkeydown={(e) => {
+				if (e.key === 'Escape') showLogicLog = false;
+			}}
+			in:fade={{ duration: 140 }}
+			out:fade={{ duration: 120 }}
+		>
+			<div class="panel logic-log-panel" in:scale={{ start: 0.98, duration: 160, easing: cubicOut }}>
+				<div class="logic-log-head">
+					<p class="log-label">LOGIC_LOG_V2.04</p>
+					<button class="close" type="button" onclick={() => (showLogicLog = false)}>Close</button>
+				</div>
+				<p class="log-text">{logicText}</p>
+			</div>
+		</div>
+	{/if}
 
 	<!-- Loading Overlay -->
 	{#if started && loading}
@@ -416,17 +444,6 @@
 		text-underline-offset: 10px;
 	}
 
-	.status {
-		margin-top: 0.75rem;
-		font-family:
-			ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
-			monospace;
-		font-size: 0.75rem;
-		letter-spacing: 0.2em;
-		text-transform: uppercase;
-		color: #00f2ff;
-	}
-
 	.stats {
 		display: flex;
 		gap: 3rem;
@@ -473,17 +490,16 @@
 	}
 
 	.footer {
-		bottom: 3rem;
+		bottom: clamp(1rem, 5vh, 3rem);
 		display: flex;
-		align-items: flex-end;
-		justify-content: space-between;
-		gap: 2rem;
-		border-top: 1px solid rgb(15 23 42);
-		padding-top: 2rem;
+		align-items: center;
+		justify-content: center;
+		gap: 1rem;
+		padding: 0.75rem 0.75rem calc(0.75rem + env(safe-area-inset-bottom));
 	}
 
-	.log {
-		max-width: 40rem;
+	.footer-left {
+		pointer-events: auto;
 	}
 
 	.log-label {
@@ -505,10 +521,30 @@
 		color: rgb(148 163 184);
 	}
 
+	.log-btn {
+		pointer-events: auto;
+		padding: 0.65rem 0.9rem;
+		border-radius: 999px;
+		border: 1px solid rgba(255, 255, 255, 0.14);
+		background: rgba(255, 255, 255, 0.06);
+		color: rgb(226 232 240);
+		font-weight: 800;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		font-size: 0.7rem;
+		cursor: pointer;
+		transition: background 150ms ease, border-color 150ms ease;
+	}
+
+	.log-btn:hover {
+		background: rgba(255, 255, 255, 0.1);
+		border-color: rgba(255, 255, 255, 0.24);
+	}
+
 	.footer-right {
 		pointer-events: auto;
 		display: flex;
-		flex-direction: column;
+		flex-direction: row;
 		align-items: flex-end;
 	}
 
@@ -524,6 +560,7 @@
 		transition: background-color 180ms ease;
 		cursor: pointer;
 		pointer-events: auto;
+		border-radius: 6px;
 	}
 
 	.next:hover {
@@ -560,6 +597,42 @@
 		letter-spacing: 0.18em;
 		text-transform: uppercase;
 		color: rgb(100 116 139);
+	}
+
+	.logic-log {
+		background: rgba(5, 7, 10, 0.82);
+		backdrop-filter: blur(18px);
+	}
+
+	.logic-log-panel {
+		max-width: 760px;
+		width: 100%;
+	}
+
+	.logic-log-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-bottom: 1rem;
+	}
+
+	.close {
+		pointer-events: auto;
+		border: 1px solid rgba(255, 255, 255, 0.14);
+		background: rgba(255, 255, 255, 0.06);
+		color: rgb(226 232 240);
+		padding: 0.6rem 0.8rem;
+		border-radius: 999px;
+		cursor: pointer;
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		font-size: 0.7rem;
+	}
+
+	.close:hover {
+		background: rgba(255, 255, 255, 0.1);
 	}
 
 	.overlay {
@@ -845,20 +918,57 @@
 		}
 		.header {
 			top: 1.5rem;
-			flex-direction: column;
+			flex-direction: row;
 			align-items: flex-start;
+			gap: 1rem;
+		}
+		.title h1 {
+			font-size: clamp(1.6rem, 5.2vw, 2.3rem);
+			text-underline-offset: 8px;
 		}
 		.stats {
-			width: 100%;
-			justify-content: space-between;
+			width: auto;
+			justify-content: flex-end;
+			gap: 1rem;
+		}
+		/* Mobile header: keep lives compact, move score to corner */
+		.stat.lives .label {
+			display: none;
+		}
+		.stat.lives .bars .bar {
+			width: 18px;
+			height: 7px;
+		}
+		.stat.score {
+			position: absolute;
+			top: 1.25rem;
+			right: 1.25rem;
+			text-align: right;
+		}
+		.stat.score .label {
+			display: none;
+		}
+		.stat.score .value {
+			font-size: 1.6rem;
 		}
 		.footer {
 			bottom: 1.5rem;
-			flex-direction: column;
-			align-items: flex-start;
+			flex-direction: row;
+			align-items: center;
+			justify-content: center;
+			flex-wrap: nowrap;
+			gap: 0.75rem;
 		}
 		.footer-right {
-			align-items: flex-start;
+			align-items: center;
+			justify-content: center;
+		}
+		.next {
+			padding-inline: 1.25rem;
+			text-align: center;
+		}
+		.log-btn {
+			width: auto;
 		}
 	}
 </style>
