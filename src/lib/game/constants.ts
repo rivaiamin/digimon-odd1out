@@ -1,6 +1,10 @@
 export const GAME = {
 	startingLives: 3,
 	scorePerCorrect: 100,
+	// Time-based scoring: award up to this bonus for fast correct picks.
+	scoreSpeedBonusMax: 100,
+	// Bonus decays linearly to 0 after this time window.
+	scoreSpeedWindowMs: 6000,
 	dealFlipDelayMs: 1500,
 	gameOverDelayMs: 2000
 } as const;

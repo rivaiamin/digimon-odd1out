@@ -18,6 +18,7 @@
 	let selectedIndex = $state<number | null>(null);
 	let gameState = $state<GameState>('dealing');
 	let isFlipped = $state(false);
+	let guessStartMs = $state<number | null>(null);
 
 	let dealTimeout: ReturnType<typeof setTimeout> | null = null;
 	let gameOverTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -34,6 +35,7 @@
 		loading = true;
 		gameState = 'dealing';
 		isFlipped = false;
+		guessStartMs = null;
 		selectedIndex = null;
 		try {
 			const newPuzzle = await fetchPuzzle();
@@ -42,6 +44,7 @@
 			dealTimeout = setTimeout(() => {
 				gameState = 'guessing';
 				isFlipped = true;
+				guessStartMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
 			}, GAME.dealFlipDelayMs);
 		} catch (err) {
 			console.error('Failed to fetch puzzle', err);
@@ -56,7 +59,11 @@
 		gameState = 'revealing';
 
 		if (index === puzzle?.answer_index) {
-			score = score + GAME.scorePerCorrect;
+			const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+			const elapsed = guessStartMs == null ? GAME.scoreSpeedWindowMs : Math.max(0, now - guessStartMs);
+			const t = Math.min(1, elapsed / GAME.scoreSpeedWindowMs); // 0..1
+			const speedBonus = Math.round(GAME.scoreSpeedBonusMax * (1 - t));
+			score = score + GAME.scorePerCorrect + speedBonus;
 			return;
 		}
 
