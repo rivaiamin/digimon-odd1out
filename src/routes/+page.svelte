@@ -137,16 +137,29 @@
 		return () => ro.disconnect();
 	});
 
+	function computeCardSize(vw: number, vh: number) {
+		// Tune sizing so phones get smaller cards without changing desktop.
+		const { minW, maxW, divisor } =
+			vw < 380
+				? { minW: 96, maxW: 152, divisor: 6.1 }
+				: vw < 480
+					? { minW: 106, maxW: 170, divisor: 5.6 }
+					: vh < 520
+						? { minW: 118, maxW: 200, divisor: 5.1 }
+						: { minW: 150, maxW: 240, divisor: 4.6 };
+
+		const estimatedW = vw / divisor;
+		const cardWidth = Math.max(minW, Math.min(maxW, estimatedW));
+		const cardHeight = (cardWidth * 340) / 240;
+
+		return { cardWidth, cardHeight };
+	}
+
 	const cardLayout = $derived.by(() => {
 		const cards = puzzle?.cards ?? [];
 		if (!viewportSize.width || !viewportSize.height) return [];
 
-		// Responsive sizing: keep 4 cards readable in small landscape
-		const maxW = 240;
-		const minW = 150;
-		const estimatedW = viewportSize.width / 4.6;
-		const cardWidth = Math.max(minW, Math.min(maxW, estimatedW));
-		const cardHeight = (cardWidth * 340) / 240;
+		const { cardWidth, cardHeight } = computeCardSize(viewportSize.width, viewportSize.height);
 		const cardXSpacingPx = cardWidth * 1.12;
 		const groupYOffsetPx = viewportSize.height < 480 ? -20 : SCENE.cardsGroupPosition[1] * -80;
 
@@ -162,11 +175,7 @@
 
 	const cardSizeStyle = $derived.by(() => {
 		if (!viewportSize.width || !viewportSize.height) return '';
-		const maxW = 240;
-		const minW = 150;
-		const estimatedW = viewportSize.width / 4.6;
-		const cardWidth = Math.max(minW, Math.min(maxW, estimatedW));
-		const cardHeight = (cardWidth * 340) / 240;
+		const { cardWidth, cardHeight } = computeCardSize(viewportSize.width, viewportSize.height);
 		return `--cardW:${cardWidth}px; --cardH:${cardHeight}px;`;
 	});
 
@@ -936,12 +945,13 @@
 			display: none;
 		}
 		.stat.lives .bars .bar {
+			margin-top: 0.5rem;
 			width: 18px;
 			height: 7px;
 		}
 		.stat.score {
-			position: absolute;
-			top: 1.25rem;
+			position: fixed;
+			top: 1.5rem;
 			right: 1.25rem;
 			text-align: right;
 		}
@@ -969,6 +979,15 @@
 		}
 		.log-btn {
 			width: auto;
+		}
+	}
+
+	@media (max-height: 420px) {
+		.header {
+			top: 0.5rem;
+		}
+		.title h1 {
+			font-size: clamp(1.35rem, 6.4vw, 1rem);
 		}
 	}
 </style>
