@@ -21,9 +21,20 @@
 		onClick
 	}: Props = $props();
 
+	const nameLen = $derived(name.trim().length);
+	const isLongName = $derived(nameLen > 20);
+	const isVeryLongName = $derived(nameLen > 28);
+
 	let wrapperEl = $state<HTMLButtonElement | null>(null);
 	let tiltX = $state(0);
 	let tiltY = $state(0);
+
+	function attachWrapperEl(node: HTMLButtonElement) {
+		wrapperEl = node;
+		return () => {
+			if (wrapperEl === node) wrapperEl = null;
+		};
+	}
 
 	function borderColor() {
 		if (isRevealed) return isCorrect ? '#00f2ff' : '#ff007a';
@@ -54,13 +65,13 @@
 	type="button"
 	aria-label={`Card ${name}`}
 	style={`--border:${borderColor()}; --tiltX:${tiltX}deg; --tiltY:${tiltY}deg; ${style}`}
-	bind:this={wrapperEl}
 	onpointermove={handlePointerMove}
 	onpointerleave={handlePointerLeave}
 	onclick={(e) => {
 		e.stopPropagation();
 		onClick();
 	}}
+	{@attach attachWrapperEl}
 >
 	<div class="card-visual" class:is-flipped={isFlipped}>
 		<div class="card-face card-back" aria-hidden="true">
@@ -77,7 +88,13 @@
 					<div class="scanlines" aria-hidden="true"></div>
 				</div>
 
-				<div class="name">{name.toUpperCase()}</div>
+				<div
+					class="name"
+					class:long-name={isLongName}
+					class:very-long-name={isVeryLongName}
+				>
+					{name.toUpperCase()}
+				</div>
 
 				<!-- badges intentionally omitted on small screens -->
 			</div>
@@ -220,10 +237,27 @@
 
 	.name {
 		font-weight: 900;
+		font-size: 1rem;
+		line-height: 1.05;
 		letter-spacing: -0.03em;
 		text-align: center;
+		text-wrap: balance;
 		color: white;
 		text-shadow: 0 0 18px rgba(0, 242, 255, 0.18);
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+		max-height: calc(2 * 1.05em);
+	}
+
+	.name.long-name {
+		font-size: 0.88rem;
+	}
+
+	.name.very-long-name {
+		font-size: 0.78rem;
 	}
 
 	.card-visual.is-flipped {
@@ -238,6 +272,14 @@
 
 		.name {
 			font-size: 0.95rem;
+		}
+
+		.name.long-name {
+			font-size: 0.84rem;
+		}
+
+		.name.very-long-name {
+			font-size: 0.74rem;
 		}
 	}
 </style>
