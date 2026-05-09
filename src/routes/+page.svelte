@@ -273,7 +273,7 @@
 
 		<div class="footer-right" aria-live="polite">
 			{#key gameState === 'revealing' ? 'next' : 'sync'}
-				{#if gameState === 'revealing'}
+				{#if gameState === 'revealing' && lives > 0}
 					<button
 						class="next"
 						type="button"
@@ -979,6 +979,78 @@
 		}
 		.log-btn {
 			width: auto;
+		}
+	}
+
+	@media (max-width: 900px) and (max-height: 520px) and (orientation: landscape) {
+		.overlay.gameover {
+			padding: 0.75rem;
+		}
+
+		.gameover .panel {
+			max-width: min(720px, 100%);
+			display: grid;
+			grid-template-columns: 64px 1fr;
+			column-gap: 0.85rem;
+			row-gap: 0.35rem;
+			align-items: center;
+			text-align: left;
+		}
+
+		.gameover .badge {
+			width: 64px;
+			height: 64px;
+			margin: 0;
+			border-radius: 18px;
+			grid-row: 1 / span 2;
+			grid-column: 1;
+			align-self: start;
+		}
+
+		.gameover :global(.badge-icon) {
+			width: 32px;
+			height: 32px;
+		}
+
+		.gameover .panel h2 {
+			grid-column: 2;
+			margin: 0;
+			font-size: clamp(1.85rem, 4.8vw, 2.5rem);
+			line-height: 0.95;
+		}
+
+		.gameover .panel h2 br {
+			display: none;
+		}
+
+		.gameover .sub {
+			grid-column: 2;
+			margin: 0;
+			letter-spacing: 0.28em;
+		}
+
+		.gameover .result {
+			grid-column: 1 / -1;
+			margin: 0.35rem 0 0.75rem;
+			padding: 1rem 1.25rem;
+			border-radius: 18px;
+		}
+
+		.gameover .result-label {
+			margin-bottom: 0.25rem;
+			font-size: 11px;
+		}
+
+		.gameover .result-score {
+			font-size: 2.75rem;
+			line-height: 1;
+		}
+
+		.gameover .restart {
+			grid-column: 1 / -1;
+			padding: 0.9rem 0.9rem;
+			font-size: 1rem;
+			border-radius: 14px;
 		}
 	}
 
