@@ -14,6 +14,9 @@
 	let volume = $state(0.4);
 	let muted = $state(false);
 	let error = $state<string | null>(null);
+	let showVolume = $state(false);
+	let volumeEl = $state<HTMLInputElement | null>(null);
+	let volumeToggleEl = $state<HTMLButtonElement | null>(null);
 
 	onMount(() => {
 		try {
@@ -76,6 +79,11 @@
 		}
 	});
 
+	$effect(() => {
+		if (!showVolume) return;
+		queueMicrotask(() => volumeEl?.focus());
+	});
+
 	async function toggle() {
 		error = null;
 		if (!audio) return;
@@ -94,6 +102,11 @@
 			error = e instanceof Error ? e.message : 'Unable to play audio';
 		}
 	}
+
+	function toggleVolumePanel() {
+		showVolume = !showVolume;
+		if (!showVolume) queueMicrotask(() => volumeToggleEl?.focus());
+	}
 </script>
 
 <div class="bgm" data-playing={isPlaying ? 'true' : 'false'}>
@@ -101,23 +114,76 @@
 
 	<button class="bgm__btn" type="button" onclick={toggle} aria-pressed={isPlaying}>
 		{#if isPlaying}
-			Pause music
+			<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 16 16" style="display:inline;vertical-align:middle">
+				<rect x="3.25" y="3" width="3.2" height="10" rx="1"/>
+				<rect x="9.55" y="3" width="3.2" height="10" rx="1"/>
+			</svg>
+			<span class="sr-only">Pause music</span>
 		{:else}
-			Play music
+			<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 16 16" style="display:inline;vertical-align:middle">
+				<polygon points="4,3 13,8 4,13" />
+			</svg>
+			<span class="sr-only">Play music</span>
 		{/if}
 	</button>
 
-	<label class="bgm__vol">
-		<span class="bgm__label">Vol</span>
-		<input
-			type="range"
-			min="0"
-			max="1"
-			step="0.01"
-			bind:value={volume}
-			aria-label="Background music volume"
-		/>
-	</label>
+	<div class="bgm__vol">
+		<button
+			class="bgm__btn bgm__btn--vol"
+			type="button"
+			onclick={toggleVolumePanel}
+			aria-haspopup="dialog"
+			aria-expanded={showVolume}
+			aria-controls="bgm-volume-panel"
+			bind:this={volumeToggleEl}
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="18"
+				height="18"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.8"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				viewBox="0 0 16 16"
+				style="display:inline;vertical-align:middle"
+			>
+				<path d="M5.5 6H3v4h2.5l3 3V3z" />
+				<path d="M11 6.2c.7.7 1.1 1.6 1.1 2.5s-.4 1.8-1.1 2.5" />
+			</svg>
+			<span class="sr-only">Adjust volume</span>
+		</button>
+
+		{#if showVolume}
+			<div
+				id="bgm-volume-panel"
+				class="bgm__vol-panel"
+				role="dialog"
+				aria-label="Volume"
+				tabindex="-1"
+				onkeydown={(e) => {
+					if (e.key === 'Escape') {
+						showVolume = false;
+						queueMicrotask(() => volumeToggleEl?.focus());
+						e.preventDefault();
+						e.stopPropagation();
+					}
+				}}
+			>
+				<input
+					class="bgm__vol-slider"
+					type="range"
+					min="0"
+					max="1"
+					step="0.01"
+					bind:value={volume}
+					aria-label="Background music volume"
+					bind:this={volumeEl}
+				/>
+			</div>
+		{/if}
+	</div>
 
 	<button
 		class="bgm__btn bgm__btn--mute"
@@ -125,7 +191,22 @@
 		onclick={() => (muted = !muted)}
 		aria-pressed={muted}
 	>
-		{muted ? 'Unmute' : 'Mute'}
+		{#if muted}
+			<!-- Muted (volume off) icon -->
+			<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 16 16" style="display:inline;vertical-align:middle">
+				<path d="M5.5 6H3v4h2.5l3 3V3z" />
+				<line x1="13" y1="5" x2="11" y2="7" />
+				<line x1="13" y1="11" x2="11" y2="9" />
+			</svg>
+			<span class="sr-only">Unmute</span>
+		{:else}
+			<!-- Unmuted (volume up) icon -->
+			<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 16 16" style="display:inline;vertical-align:middle">
+				<path d="M5.5 6H3v4h2.5l3 3V3z" />
+				<path d="M11 5c.9.9 1.5 2.2 1.5 3.5S11.9 11.1 11 12" />
+			</svg>
+			<span class="sr-only">Mute</span>
+		{/if}
 	</button>
 
 	{#if error}
@@ -173,19 +254,51 @@
 	}
 
 	.bgm__vol {
+		position: relative;
 		display: grid;
-		grid-auto-flow: column;
-		align-items: center;
-		gap: 8px;
 	}
 
-	.bgm__label {
-		opacity: 0.9;
+	.bgm__vol-panel {
+		position: absolute;
+		right: 0;
+		bottom: calc(100% + 10px);
+		padding: 10px 10px;
+		border-radius: 14px;
+		background: rgba(11, 18, 32, 0.85);
+		border: 1px solid rgba(255, 255, 255, 0.12);
+		backdrop-filter: blur(10px);
 	}
 
-	input[type='range'] {
-		width: 110px;
+	.bgm__vol-slider {
+		/* Default: rotate for broad compatibility. */
+		height: 26px;
+		width: 120px;
+		transform: rotate(-90deg);
+		transform-origin: center;
 		accent-color: #00f2ff;
+		touch-action: none;
+	}
+
+	/* Prefer native vertical sliders where supported. */
+	@supports (writing-mode: vertical-rl) {
+		.bgm__vol-slider {
+			transform: none;
+			writing-mode: vertical-rl;
+			direction: rtl; /* puts min at bottom in most UAs */
+			height: 120px;
+			width: 20px;
+		}
+	}
+
+	/* WebKit-only legacy vertical slider support. */
+	@supports (-webkit-appearance: slider-vertical) {
+		.bgm__vol-slider {
+			transform: none;
+			-webkit-appearance: slider-vertical;
+			appearance: slider-vertical;
+			height: 120px;
+			width: 20px;
+		}
 	}
 
 	.bgm__err {
@@ -204,8 +317,26 @@
 		.bgm {
 			bottom: 72px;
 		}
-		input[type='range'] {
-			width: 86px;
+		.bgm__vol-slider {
+			width: 104px;
+		}
+	}
+
+	@supports (writing-mode: vertical-rl) {
+		@media (max-width: 520px) {
+			.bgm__vol-slider {
+				width: 20px;
+				height: 104px;
+			}
+		}
+	}
+
+	@supports (-webkit-appearance: slider-vertical) {
+		@media (max-width: 520px) {
+			.bgm__vol-slider {
+				width: 20px;
+				height: 104px;
+			}
 		}
 	}
 </style>
