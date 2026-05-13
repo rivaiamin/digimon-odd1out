@@ -5,6 +5,8 @@ export const GAME = {
 	scoreSpeedBonusMax: 100,
 	// Bonus decays linearly to 0 after this time window.
 	scoreSpeedWindowMs: 6000,
+	// Hard cap per puzzle: no guess after this → lose a life (same as a wrong pick).
+	guessTimeLimitMs: 10_000,
 	dealFlipDelayMs: 1500,
 	gameOverDelayMs: 2000
 } as const;

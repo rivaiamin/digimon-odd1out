@@ -19,15 +19,38 @@
 	let gameState = $state<GameState>('dealing');
 	let isFlipped = $state(false);
 	let guessStartMs = $state<number | null>(null);
+	/** High-frequency clock while guessing; drives HUD countdown only. */
+	let guessTickMs = $state(0);
 
 	let dealTimeout: ReturnType<typeof setTimeout> | null = null;
+	let guessLimitTimeout: ReturnType<typeof setTimeout> | null = null;
 	let gameOverTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	function clearTimers() {
 		if (dealTimeout) clearTimeout(dealTimeout);
+		if (guessLimitTimeout) clearTimeout(guessLimitTimeout);
 		if (gameOverTimeout) clearTimeout(gameOverTimeout);
 		dealTimeout = null;
+		guessLimitTimeout = null;
 		gameOverTimeout = null;
+	}
+
+	function applyWrongAnswer() {
+		const nextLives = lives - 1;
+		lives = nextLives;
+		if (nextLives <= 0) {
+			gameOverTimeout = setTimeout(() => {
+				gameState = 'gameOver';
+			}, GAME.gameOverDelayMs);
+		}
+	}
+
+	function handleGuessTimeUp() {
+		guessLimitTimeout = null;
+		if (gameState !== 'guessing') return;
+		selectedIndex = null;
+		gameState = 'revealing';
+		applyWrongAnswer();
 	}
 
 	async function fetchNewPuzzle() {
@@ -44,7 +67,10 @@
 			dealTimeout = setTimeout(() => {
 				gameState = 'guessing';
 				isFlipped = true;
-				guessStartMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+				const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+				guessStartMs = now;
+				guessTickMs = now;
+				guessLimitTimeout = setTimeout(handleGuessTimeUp, GAME.guessTimeLimitMs);
 			}, GAME.dealFlipDelayMs);
 		} catch (err) {
 			console.error('Failed to fetch puzzle', err);
@@ -55,6 +81,10 @@
 
 	function handleSelect(index: number) {
 		if (gameState !== 'guessing') return;
+		if (guessLimitTimeout) {
+			clearTimeout(guessLimitTimeout);
+			guessLimitTimeout = null;
+		}
 		selectedIndex = index;
 		gameState = 'revealing';
 
@@ -67,13 +97,7 @@
 			return;
 		}
 
-		const nextLives = lives - 1;
-		lives = nextLives;
-		if (nextLives <= 0) {
-			gameOverTimeout = setTimeout(() => {
-				gameState = 'gameOver';
-			}, GAME.gameOverDelayMs);
-		}
+		applyWrongAnswer();
 	}
 
 	function restartGame() {
@@ -88,6 +112,36 @@
 	}
 
 	onMount(() => () => clearTimers());
+
+	const guessRemainingMs = $derived.by(() => {
+		if (gameState !== 'guessing' || guessStartMs == null) return 0;
+		const tick = guessTickMs;
+		return Math.max(0, guessStartMs + GAME.guessTimeLimitMs - tick);
+	});
+
+	const guessSecondsLabel = $derived(
+		gameState === 'guessing' ? Math.ceil(guessRemainingMs / 1000) : null
+	);
+
+	const guessBarPct = $derived(
+		gameState === 'guessing'
+			? Math.min(100, Math.max(0, (guessRemainingMs / GAME.guessTimeLimitMs) * 100))
+			: 100
+	);
+
+	$effect(() => {
+		if (gameState !== 'guessing') return;
+		let cancelled = false;
+		function loop() {
+			if (cancelled) return;
+			guessTickMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+			requestAnimationFrame(loop);
+		}
+		requestAnimationFrame(loop);
+		return () => {
+			cancelled = true;
+		};
+	});
 
 	const logicText = $derived(
 		gameState === 'revealing' && puzzle
@@ -254,6 +308,20 @@
 			in:fly={{ x: 20, duration: 420, easing: quintOut }}
 			out:fade={{ duration: 140 }}
 		>
+			<div class="stat timer" class:is-active={gameState === 'guessing'}>
+				<p class="label">Resolve window</p>
+				<p class="value timer-value" aria-live="polite">
+					{#if gameState === 'guessing'}
+						{guessSecondsLabel}<span class="timer-suffix">s</span>
+					{:else}
+						<span class="timer-idle">—</span>
+					{/if}
+				</p>
+				<div class="timer-track" aria-hidden="true">
+					<div class="timer-fill" style={`width:${guessBarPct}%;`}></div>
+				</div>
+			</div>
+
 			<div class="stat lives">
 				<p class="label">Lives Remaining</p>
 				<div class="bars">
@@ -494,6 +562,50 @@
 	.bar.is-on {
 		background: #ff007a;
 		box-shadow: 0 0 10px rgba(255, 0, 122, 0.6);
+	}
+
+	.stat.timer:not(.is-active) .timer-value {
+		color: rgb(71 85 105);
+	}
+
+	.stat.timer.is-active .timer-value {
+		color: #ff9d00;
+		text-shadow: 0 0 12px rgba(255, 157, 0, 0.35);
+	}
+
+	.timer-value {
+		font-variant-numeric: tabular-nums;
+		display: flex;
+		align-items: baseline;
+		justify-content: flex-end;
+		gap: 0.1em;
+	}
+
+	.timer-suffix {
+		font-size: 0.55em;
+		font-weight: 700;
+		opacity: 0.85;
+	}
+
+	.timer-idle {
+		font-weight: 700;
+	}
+
+	.timer-track {
+		margin-top: 0.35rem;
+		height: 4px;
+		width: 100%;
+		min-width: 4.5rem;
+		border-radius: 999px;
+		background: rgb(30 41 59);
+		overflow: hidden;
+	}
+
+	.timer-fill {
+		height: 100%;
+		border-radius: 999px;
+		background: linear-gradient(90deg, #00f2ff, #ff9d00);
+		transition: width 80ms linear;
 	}
 
 	.value {
@@ -955,6 +1067,16 @@
 			margin-top: 0.5rem;
 			width: 18px;
 			height: 7px;
+		}
+		.stat.timer .label {
+			display: none;
+		}
+		.stat.timer .timer-track {
+			min-width: 3.25rem;
+			margin-top: 0.25rem;
+		}
+		.stat.timer .timer-value {
+			font-size: 1.35rem;
 		}
 		.stat.score {
 			position: fixed;
