@@ -1,15 +1,28 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { fade, fly, scale } from 'svelte/transition';
 	import { cubicOut, quintOut } from 'svelte/easing';
-	import { RefreshCw } from 'lucide-svelte';
+	import { RefreshCw, Share2 } from 'lucide-svelte';
 	import type { GameState, Puzzle } from '$lib/game/types';
 	import { GAME, SCENE } from '$lib/game/constants';
 	import { fetchPuzzle } from '$lib/game/puzzleClient';
 	import DigiCardDom from '$lib/components/DigiCardDom.svelte';
+	import ShareResultCard from '$lib/components/ShareResultCard.svelte';
+	import {
+		captureShareCard,
+		downloadShareImage,
+		getShareFilename,
+		getShareText,
+		shareOrDownloadImage
+	} from '$lib/share/shareResult';
 	import { computeHandLayout } from '$lib/ui/handLayout';
 
 	let started = $state(false);
+	let showSharePreview = $state(false);
+	let shareBusy = $state(false);
+	let shareMessage = $state<string | null>(null);
+	let shareCaptureEl = $state<HTMLElement | null>(null);
+	let shareCapturing = $state(false);
 
 	let puzzle = $state<Puzzle | null>(null);
 	let loading = $state(false);
@@ -101,9 +114,90 @@
 	}
 
 	function restartGame() {
+		showSharePreview = false;
 		score = 0;
 		lives = GAME.startingLives;
 		fetchNewPuzzle();
+	}
+
+	const playUrl = $derived.by(() => {
+		if (typeof window === 'undefined') return '';
+		const { origin, pathname } = window.location;
+		return `${origin}${pathname}`;
+	});
+
+	function openSharePreview() {
+		shareMessage = null;
+		showSharePreview = true;
+	}
+
+	function closeSharePreview() {
+		if (shareBusy) return;
+		showSharePreview = false;
+		shareMessage = null;
+	}
+
+	function setShareMessageForOutcome(
+		mode: 'share' | 'download',
+		outcome?: 'shared-file' | 'shared-link' | 'downloaded'
+	) {
+		if (mode === 'download' || outcome === 'downloaded') {
+			shareMessage = 'Image saved — check your Downloads folder.';
+			return;
+		}
+		if (outcome === 'shared-file') {
+			shareMessage = 'Choose an app in the share sheet. The image is attached.';
+			return;
+		}
+		if (outcome === 'shared-link') {
+			shareMessage = 'Image saved to Downloads. Share sheet opened with the game link.';
+		}
+	}
+
+	async function exportShareImage(mode: 'share' | 'download') {
+		if (shareBusy) return;
+
+		await tick();
+		const captureTarget = shareCaptureEl;
+		if (!captureTarget) {
+			shareMessage = 'Share card is not ready yet. Close this dialog and try again.';
+			return;
+		}
+
+		shareBusy = true;
+		shareCapturing = true;
+		shareMessage = null;
+		await tick();
+
+		try {
+			const blob = await captureShareCard(captureTarget);
+			const filename = getShareFilename(score);
+			const text = getShareText(score, playUrl);
+
+			if (mode === 'download') {
+				downloadShareImage(blob, filename);
+				setShareMessageForOutcome('download');
+				return;
+			}
+
+			const outcome = await shareOrDownloadImage(blob, {
+				filename,
+				title: 'DIGI-ODD ONE OUT',
+				text,
+				url: playUrl
+			});
+			setShareMessageForOutcome('share', outcome);
+		} catch (err) {
+			if (err instanceof DOMException && err.name === 'AbortError') {
+				shareMessage = 'Share cancelled.';
+			} else {
+				shareMessage = 'Could not create the image. Try Save image, or use another browser.';
+				console.error('Failed to export share image', err);
+			}
+		} finally {
+			shareCapturing = false;
+			shareBusy = false;
+		}
 	}
 
 	function startGame() {
@@ -438,12 +532,82 @@
 					<p class="result-score">{score}</p>
 				</div>
 
-				<button class="restart" type="button" onclick={restartGame}>
-					<span>Initialize Reboot</span>
-				</button>
+				<div class="gameover-actions">
+					<button class="share-open" type="button" onclick={openSharePreview}>
+						<Share2 class="share-open-icon" aria-hidden="true" />
+						<span>Share Result</span>
+					</button>
+					<button class="restart" type="button" onclick={restartGame}>
+						<span>Initialize Reboot</span>
+					</button>
+				</div>
 			</div>
 		</div>
 	{/if}
+
+	{#if showSharePreview}
+		<div
+			class="overlay share-preview"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="share-preview-title"
+			tabindex="0"
+			onclick={(e) => {
+				if (e.currentTarget === e.target) closeSharePreview();
+			}}
+			onkeydown={(e) => {
+				if (e.key === 'Escape') closeSharePreview();
+			}}
+			in:fade={{ duration: 160 }}
+			out:fade={{ duration: 120 }}
+		>
+			<div class="panel share-preview-panel" in:scale={{ start: 0.98, duration: 180, easing: cubicOut }}>
+				<div class="share-preview-head">
+					<h2 id="share-preview-title">Share your run</h2>
+					<button class="close" type="button" onclick={closeSharePreview} disabled={shareBusy}>
+						Close
+					</button>
+				</div>
+				<p class="share-preview-hint">
+					This is what others will see. On desktop, Save image downloads a PNG; Share may also open a
+					link share dialog.
+				</p>
+
+				{#if shareMessage}
+					<p class="share-status" role="status" aria-live="polite">{shareMessage}</p>
+				{/if}
+
+				<div class="share-preview-frame" aria-hidden={shareBusy}>
+					<div class="share-preview-scaler">
+						<ShareResultCard {score} playUrl={playUrl} />
+					</div>
+				</div>
+
+				<div class="share-preview-actions">
+					<button
+						class="restart"
+						type="button"
+						disabled={shareBusy}
+						onclick={() => exportShareImage('share')}
+					>
+						<span>{shareBusy ? 'Preparing…' : 'Share image'}</span>
+					</button>
+					<button
+						class="share-save"
+						type="button"
+						disabled={shareBusy}
+						onclick={() => exportShareImage('download')}
+					>
+						<span>Save image</span>
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<div class="share-capture-host" class:is-capturing={shareCapturing} aria-hidden="true">
+		<ShareResultCard bind:root={shareCaptureEl} {score} playUrl={playUrl} />
+	</div>
 
 	<!-- Scanlines -->
 	<div class="scanline" aria-hidden="true"></div>
@@ -1024,6 +1188,189 @@
 		letter-spacing: -0.02em;
 	}
 
+	.gameover-actions {
+		display: grid;
+		gap: 0.75rem;
+		width: 100%;
+	}
+
+	.share-open {
+		width: 100%;
+		padding: 1rem;
+		border-radius: 16px;
+		border: 2px solid rgba(0, 242, 255, 0.45);
+		background: rgba(0, 242, 255, 0.08);
+		color: #00f2ff;
+		font-weight: 900;
+		font-size: 1rem;
+		transform: skewX(-12deg);
+		cursor: pointer;
+		transition:
+			transform 120ms ease,
+			background-color 180ms ease,
+			border-color 180ms ease;
+		pointer-events: auto;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.6rem;
+	}
+
+	.share-open:hover {
+		background: rgba(0, 242, 255, 0.16);
+		border-color: #00f2ff;
+	}
+
+	.share-open:active {
+		transform: skewX(-12deg) scale(0.98);
+	}
+
+	.share-open span {
+		display: block;
+		transform: skewX(12deg);
+		text-transform: uppercase;
+		letter-spacing: -0.02em;
+	}
+
+	:global(.share-open-icon) {
+		width: 1.1rem;
+		height: 1.1rem;
+		transform: skewX(12deg);
+	}
+
+	.share-preview {
+		z-index: 105;
+		background: rgba(5, 7, 10, 0.94);
+		backdrop-filter: blur(28px);
+	}
+
+	.share-preview-panel {
+		max-width: min(520px, 100%);
+		max-height: min(92vh, 900px);
+		overflow-y: auto;
+		text-align: left;
+	}
+
+	.share-preview-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-bottom: 0.5rem;
+	}
+
+	.share-preview-head h2 {
+		margin: 0;
+		font-size: clamp(1.5rem, 4vw, 2rem);
+		font-weight: 900;
+		font-style: italic;
+		color: white;
+		letter-spacing: -0.03em;
+	}
+
+	.share-preview-hint {
+		margin: 0 0 0.75rem;
+		font-size: 0.95rem;
+		line-height: 1.5;
+		color: rgb(148 163 184);
+	}
+
+	.share-status {
+		margin: 0 0 1rem;
+		padding: 0.75rem 1rem;
+		border-radius: 12px;
+		border: 1px solid rgba(0, 242, 255, 0.35);
+		background: rgba(0, 242, 255, 0.08);
+		color: #e2e8f0;
+		font-size: 0.9rem;
+		line-height: 1.45;
+	}
+
+	.share-preview-frame {
+		position: relative;
+		width: min(360px, calc(100vw - 3rem));
+		aspect-ratio: 1;
+		margin: 0 auto 1.25rem;
+		overflow: hidden;
+		border-radius: 18px;
+		border: 1px solid rgb(30 41 59);
+		box-shadow: 0 24px 48px rgba(0, 0, 0, 0.45);
+		flex-shrink: 0;
+	}
+
+	.share-preview-scaler {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 1080px;
+		height: 1080px;
+		transform: scale(0.3333333);
+		transform-origin: top left;
+		pointer-events: none;
+	}
+
+	.share-preview-actions {
+		display: grid;
+		gap: 0.75rem;
+	}
+
+	.share-save {
+		width: 100%;
+		padding: 1rem;
+		border-radius: 16px;
+		border: 1px solid rgb(51 65 85);
+		background: rgba(15, 23, 42, 0.8);
+		color: rgb(226 232 240);
+		font-weight: 900;
+		font-size: 1rem;
+		transform: skewX(-12deg);
+		cursor: pointer;
+		transition:
+			transform 120ms ease,
+			background-color 180ms ease;
+		pointer-events: auto;
+	}
+
+	.share-save:hover {
+		background: rgba(30, 41, 59, 0.95);
+	}
+
+	.share-save:active {
+		transform: skewX(-12deg) scale(0.98);
+	}
+
+	.share-save:disabled,
+	.restart:disabled,
+	.share-open:disabled,
+	.close:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
+	.share-save span {
+		display: block;
+		transform: skewX(12deg);
+		text-transform: uppercase;
+		letter-spacing: -0.02em;
+	}
+
+	.share-capture-host {
+		position: fixed;
+		left: 0;
+		top: 0;
+		width: 1080px;
+		height: 1080px;
+		overflow: hidden;
+		pointer-events: none;
+		visibility: hidden;
+		z-index: -1;
+	}
+
+	.share-capture-host.is-capturing {
+		visibility: visible;
+		z-index: 104;
+	}
+
 	@keyframes spin {
 		to {
 			transform: rotate(360deg);
@@ -1175,8 +1522,12 @@
 			line-height: 1;
 		}
 
-		.gameover .restart {
+		.gameover-actions {
 			grid-column: 1 / -1;
+		}
+
+		.gameover .restart,
+		.gameover .share-open {
 			padding: 0.9rem 0.9rem;
 			font-size: 1rem;
 			border-radius: 14px;

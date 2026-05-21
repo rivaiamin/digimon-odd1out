@@ -50,6 +50,7 @@
 		"@threlte/core": "^8.5.9",
 		"@threlte/extras": "^9.14.9",
 		"better-sqlite3": "^12.8.0",
+		"html-to-image": "^1.11.13",
 		"lucide-svelte": "^1.0.1",
 		"three": "^0.184.0"
 	}
