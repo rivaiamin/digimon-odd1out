@@ -5,7 +5,7 @@
 	--font-sans: 'Outfit', ui-sans-serif, system-ui, sans-serif;
 	--font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
 
-	--color-digital-cyan: #00f2ff;
+	--color-digital-cyan: #ff9d00;
 	--color-digital-blue: #0044ff;
 	--color-digital-pink: #ff007a;
 	--color-digital-gold: #ff9d00;
@@ -30,8 +30,8 @@
 	z-index: 0;
 	opacity: 0.5;
 	background-image:
-		linear-gradient(rgba(0, 242, 255, 0.06) 1px, transparent 1px),
-		linear-gradient(90deg, rgba(0, 242, 255, 0.06) 1px, transparent 1px);
+		linear-gradient(rgba(255, 157, 0, 0.06) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(255, 157, 0, 0.06) 1px, transparent 1px);
 	background-size: 64px 64px;
 	mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 1) 20%, transparent 70%);
 }
@@ -45,7 +45,7 @@
 	transform: translate(-50%, -50%);
 	z-index: 0;
 	background:
-		radial-gradient(circle at center, rgba(0, 242, 255, 0.16), transparent 60%),
+		radial-gradient(circle at center, rgba(255, 157, 0, 0.16), transparent 60%),
 		radial-gradient(circle at 30% 60%, rgba(255, 0, 122, 0.12), transparent 55%);
 	filter: blur(6px);
 }

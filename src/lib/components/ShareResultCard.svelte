@@ -69,8 +69,8 @@
 		inset: 0;
 		opacity: 0.45;
 		background-image:
-			linear-gradient(rgba(0, 242, 255, 0.08) 1px, transparent 1px),
-			linear-gradient(90deg, rgba(0, 242, 255, 0.08) 1px, transparent 1px);
+			linear-gradient(rgba(255, 157, 0, 0.08) 1px, transparent 1px),
+			linear-gradient(90deg, rgba(255, 157, 0, 0.08) 1px, transparent 1px);
 		background-size: 64px 64px;
 		pointer-events: none;
 	}
@@ -83,7 +83,7 @@
 		height: 720px;
 		transform: translate(-50%, -50%);
 		background:
-			radial-gradient(circle at center, rgba(0, 242, 255, 0.2), transparent 62%),
+			radial-gradient(circle at center, rgba(255, 157, 0, 0.2), transparent 62%),
 			radial-gradient(circle at 28% 58%, rgba(255, 0, 122, 0.14), transparent 55%);
 		pointer-events: none;
 	}
@@ -112,7 +112,7 @@
 		line-height: 0.95;
 		color: white;
 		text-decoration: underline;
-		text-decoration-color: #00f2ff;
+		text-decoration-color: #ff9d00;
 		text-decoration-thickness: 6px;
 		text-underline-offset: 14px;
 	}
@@ -141,7 +141,7 @@
 		width: 132px;
 		height: 188px;
 		border-radius: 18px;
-		border: 3px solid rgba(0, 242, 255, 0.35);
+		border: 3px solid rgba(255, 157, 0, 0.35);
 		background: linear-gradient(160deg, rgba(15, 23, 42, 0.95), rgba(2, 6, 23, 0.98));
 		box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
 		display: grid;
@@ -160,7 +160,7 @@
 		transform: skewX(10deg);
 		font-size: 40px;
 		font-weight: 900;
-		color: #00f2ff;
+		color: #ff9d00;
 	}
 
 	.mini-card.odd .mini-card-mark {
@@ -197,7 +197,7 @@
 		font-weight: 900;
 		line-height: 1;
 		letter-spacing: -0.05em;
-		color: #00f2ff;
+		color: #ff9d00;
 		font-variant-numeric: tabular-nums;
 	}
 
@@ -228,7 +228,7 @@
 		margin: 8px 0 0;
 		font-size: 34px;
 		font-weight: 900;
-		color: #00f2ff;
+		color: #ff9d00;
 		word-break: break-all;
 	}
 </style>

@@ -28,7 +28,7 @@ export const SCENE = {
 
 export const COLORS = {
 	background: '#05070a',
-	digitalCyan: '#00f2ff',
+	digitalCyan: '#ff9d00',
 	digitalPink: '#ff007a',
 	digitalGold: '#ff9d00',
 	arenaBackground: '#020617'

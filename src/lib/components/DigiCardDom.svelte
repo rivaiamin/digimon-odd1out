@@ -37,8 +37,8 @@
 	}
 
 	function borderColor() {
-		if (isRevealed) return isCorrect ? '#00f2ff' : '#ff007a';
-		return isSelected ? '#ff9d00' : 'rgba(0, 242, 255, 0.55)';
+		if (isRevealed) return isCorrect ? '#ff9d00' : '#ff007a';
+		return isSelected ? '#ff9d00' : 'rgba(255, 157, 0, 0.55)';
 	}
 
 	function handlePointerMove(e: PointerEvent) {
@@ -151,10 +151,10 @@
 
 	.card-back {
 		background:
-			radial-gradient(circle at top left, rgba(0, 242, 255, 0.14), transparent 55%),
+			radial-gradient(circle at top left, rgba(255, 157, 0, 0.14), transparent 55%),
 			linear-gradient(180deg, rgba(10, 15, 25, 0.95), rgba(5, 7, 10, 0.95));
-		border: 2px solid rgba(0, 242, 255, 0.35);
-		box-shadow: inset 0 0 0 1px rgba(0, 242, 255, 0.08);
+		border: 2px solid rgba(255, 157, 0, 0.35);
+		box-shadow: inset 0 0 0 1px rgba(255, 157, 0, 0.08);
 		transform: rotateY(0deg);
 		overflow: hidden;
 	}
@@ -163,8 +163,8 @@
 		position: absolute;
 		inset: -40%;
 		background-image:
-			linear-gradient(rgba(0, 242, 255, 0.1) 1px, transparent 1px),
-			linear-gradient(90deg, rgba(0, 242, 255, 0.1) 1px, transparent 1px);
+			linear-gradient(rgba(255, 157, 0, 0.1) 1px, transparent 1px),
+			linear-gradient(90deg, rgba(255, 157, 0, 0.1) 1px, transparent 1px);
 		background-size: 32px 32px;
 		opacity: 0.25;
 		transform: rotate(20deg);
@@ -182,8 +182,8 @@
 		border: 2px solid var(--border);
 		transform: translateZ(1px);
 		box-shadow:
-			0 0 0 1px rgba(0, 242, 255, 0.12),
-			0 0 22px rgba(0, 242, 255, 0.16);
+			0 0 0 1px rgba(255, 157, 0, 0.12),
+			0 0 22px rgba(255, 157, 0, 0.16);
 		opacity: 0.95;
 	}
 
@@ -206,7 +206,7 @@
 		border-radius: 12px;
 		/* background: linear-gradient(135deg, rgba(26, 28, 44, 1), rgba(0, 68, 255, 0.22)); */
 		background: white;
-		border: 1px solid rgba(0, 242, 255, 0.18);
+		border: 1px solid rgba(255, 157, 0, 0.18);
 		overflow: hidden;
 		/* padding: 12px; */
 	}
@@ -243,7 +243,7 @@
 		text-align: center;
 		text-wrap: balance;
 		color: white;
-		text-shadow: 0 0 18px rgba(0, 242, 255, 0.18);
+		text-shadow: 0 0 18px rgba(255, 157, 0, 0.18);
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
 		line-clamp: 2;

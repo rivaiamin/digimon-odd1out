@@ -51,8 +51,8 @@
 	let animT = 0;
 
 	function borderColor() {
-		if (isRevealed) return isCorrect ? '#00f2ff' : '#ff007a';
-		return isSelected ? '#ff9d00' : 'rgba(0, 242, 255, 0.4)';
+		if (isRevealed) return isCorrect ? '#ff9d00' : '#ff007a';
+		return isSelected ? '#ff9d00' : 'rgba(255, 157, 0, 0.4)';
 	}
 
 	useTask((delta: number) => {
@@ -115,7 +115,7 @@
 
 		<T.Mesh position={[0, 0.4, 0.021]}>
 			<T.PlaneGeometry args={[cardWidth * 0.85, cardHeight * 0.55]} />
-			<T.MeshStandardMaterial color="#00f2ff" transparent opacity={0.05} wireframe />
+			<T.MeshStandardMaterial color="#ff9d00" transparent opacity={0.05} wireframe />
 		</T.Mesh>
 
 		{#if texture}
@@ -145,14 +145,14 @@
 			<Text
 				position={[-0.5, 0, 0]}
 				fontSize={0.08}
-				color="#00f2ff"
+				color="#ff9d00"
 				anchorX="center"
 				text="[ TYPE_V1 ]"
 			/>
 			<Text
 				position={[0.5, 0, 0]}
 				fontSize={0.08}
-				color="#00f2ff"
+				color="#ff9d00"
 				anchorX="center"
 				text="[ NODE_STABLE ]"
 			/>
@@ -167,7 +167,7 @@
 		<Text
 			position={[0, 0, 0.03]}
 			fontSize={0.2}
-			color="#00f2ff"
+			color="#ff9d00"
 			maxWidth={cardWidth * 0.8}
 			textAlign="center"
 			text="ANALYZING\nDIGITAL\nSIGNATURE"

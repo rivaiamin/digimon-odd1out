@@ -249,7 +249,7 @@
 	}
 
 	.bgm__btn:focus-visible {
-		outline: 2px solid rgba(0, 242, 255, 0.7);
+		outline: 2px solid rgba(255, 157, 0, 0.7);
 		outline-offset: 2px;
 	}
 
@@ -275,7 +275,7 @@
 		width: 120px;
 		transform: rotate(-90deg);
 		transform-origin: center;
-		accent-color: #00f2ff;
+		accent-color: #ff9d00;
 		touch-action: none;
 	}
 

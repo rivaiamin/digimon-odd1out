@@ -7,6 +7,7 @@
 	import { GAME, SCENE } from '$lib/game/constants';
 	import { fetchPuzzle } from '$lib/game/puzzleClient';
 	import DigiCardDom from '$lib/components/DigiCardDom.svelte';
+	import HomeTitle from '$lib/components/HomeTitle.svelte';
 	import ShareResultCard from '$lib/components/ShareResultCard.svelte';
 	import {
 		captureShareCard,
@@ -354,7 +355,7 @@
 	{#if !started}
 		<div class="overlay home" role="dialog" aria-modal="true" in:fade={{ duration: 180 }}>
 			<div class="panel home-panel" in:scale={{ start: 0.98, duration: 220, easing: cubicOut }}>
-				<h1 class="home-title">DIGI-ODD ONE OUT</h1>
+				<HomeTitle />
 				<p class="home-brief">
 					Four Digimon enter the arena. Three share a hidden trait. One is the anomaly. Identify the
 					odd one out to stabilize the loop.
@@ -687,7 +688,7 @@
 		letter-spacing: -0.04em;
 		color: white;
 		text-decoration: underline;
-		text-decoration-color: #00f2ff;
+		text-decoration-color: #ff9d00;
 		text-decoration-thickness: 4px;
 		text-underline-offset: 10px;
 	}
@@ -768,7 +769,7 @@
 	.timer-fill {
 		height: 100%;
 		border-radius: 999px;
-		background: linear-gradient(90deg, #00f2ff, #ff9d00);
+		background: linear-gradient(90deg, #ff9d00, #ffc04d);
 		transition: width 80ms linear;
 	}
 
@@ -776,7 +777,7 @@
 		font-size: 2rem;
 		font-weight: 800;
 		letter-spacing: -0.02em;
-		color: #00f2ff;
+		color: #ff9d00;
 		text-align: right;
 		font-variant-numeric: tabular-nums;
 	}
@@ -801,7 +802,7 @@
 		font-size: 10px;
 		letter-spacing: 0.3em;
 		text-transform: uppercase;
-		color: #00f2ff;
+		color: #ff9d00;
 		margin-bottom: 0.75rem;
 	}
 
@@ -841,7 +842,7 @@
 	}
 
 	.next {
-		background: #00f2ff;
+		background: #ff9d00;
 		color: black;
 		font-weight: 900;
 		padding: 0.85rem 3rem;
@@ -877,8 +878,8 @@
 	}
 
 	.sync-bar.on {
-		background: #00f2ff;
-		box-shadow: 0 0 8px rgba(0, 242, 255, 0.4);
+		background: #ff9d00;
+		box-shadow: 0 0 8px rgba(255, 157, 0, 0.4);
 	}
 
 	.sync-label {
@@ -949,18 +950,6 @@
 		text-align: center;
 	}
 
-	.home-title {
-		font-size: clamp(2.8rem, 6vw, 4.75rem);
-		font-weight: 900;
-		font-style: italic;
-		letter-spacing: -0.05em;
-		color: white;
-		text-decoration: underline;
-		text-decoration-color: #00f2ff;
-		text-decoration-thickness: 4px;
-		text-underline-offset: 12px;
-	}
-
 	.home-brief {
 		margin-top: 1.25rem;
 		margin-bottom: 3rem;
@@ -973,7 +962,7 @@
 	.start {
 		width: min(480px, 100%);
 		padding: 1.25rem 1rem;
-		background: #00f2ff;
+		background: #ff9d00;
 		color: black;
 		font-weight: 900;
 		font-size: 1.25rem;
@@ -983,7 +972,7 @@
 		transition:
 			transform 120ms ease,
 			background-color 180ms ease;
-		box-shadow: 0 20px 40px -10px rgba(0, 242, 255, 0.4);
+		box-shadow: 0 20px 40px -10px rgba(255, 157, 0, 0.4);
 		pointer-events: auto;
 	}
 
@@ -1013,7 +1002,7 @@
 		width: 80px;
 		height: 80px;
 		border-radius: 999px;
-		border: 4px solid #00f2ff;
+		border: 4px solid #ff9d00;
 		border-top-color: transparent;
 		animation: spin 1s linear infinite;
 		margin-bottom: 2rem;
@@ -1036,7 +1025,7 @@
 	.pulse span {
 		width: 48px;
 		height: 4px;
-		background: #00f2ff;
+		background: #ff9d00;
 		animation: pulse 900ms ease-in-out infinite;
 	}
 
@@ -1151,7 +1140,7 @@
 		font-size: 4rem;
 		font-weight: 900;
 		letter-spacing: -0.05em;
-		color: #00f2ff;
+		color: #ff9d00;
 		font-variant-numeric: tabular-nums;
 		transform: skewX(12deg);
 	}
@@ -1159,7 +1148,7 @@
 	.restart {
 		width: 100%;
 		padding: 1.25rem 1rem;
-		background: #00f2ff;
+		background: #ff9d00;
 		color: black;
 		font-weight: 900;
 		font-size: 1.25rem;
@@ -1169,7 +1158,7 @@
 		transition:
 			transform 120ms ease,
 			background-color 180ms ease;
-		box-shadow: 0 20px 40px -10px rgba(0, 242, 255, 0.4);
+		box-shadow: 0 20px 40px -10px rgba(255, 157, 0, 0.4);
 		pointer-events: auto;
 	}
 
@@ -1198,9 +1187,9 @@
 		width: 100%;
 		padding: 1rem;
 		border-radius: 16px;
-		border: 2px solid rgba(0, 242, 255, 0.45);
-		background: rgba(0, 242, 255, 0.08);
-		color: #00f2ff;
+		border: 2px solid rgba(255, 157, 0, 0.45);
+		background: rgba(255, 157, 0, 0.08);
+		color: #ff9d00;
 		font-weight: 900;
 		font-size: 1rem;
 		transform: skewX(-12deg);
@@ -1217,8 +1206,8 @@
 	}
 
 	.share-open:hover {
-		background: rgba(0, 242, 255, 0.16);
-		border-color: #00f2ff;
+		background: rgba(255, 157, 0, 0.16);
+		border-color: #ff9d00;
 	}
 
 	.share-open:active {
@@ -1279,8 +1268,8 @@
 		margin: 0 0 1rem;
 		padding: 0.75rem 1rem;
 		border-radius: 12px;
-		border: 1px solid rgba(0, 242, 255, 0.35);
-		background: rgba(0, 242, 255, 0.08);
+		border: 1px solid rgba(255, 157, 0, 0.35);
+		background: rgba(255, 157, 0, 0.08);
 		color: #e2e8f0;
 		font-size: 0.9rem;
 		line-height: 1.45;
