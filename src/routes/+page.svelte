@@ -353,7 +353,7 @@
 	<div class="glow-orb" aria-hidden="true"></div>
 
 	{#if !started}
-		<div class="overlay home" role="dialog" aria-modal="true" in:fade={{ duration: 180 }}>
+		<div class="overlay home digi-scrollbar" role="dialog" aria-modal="true" in:fade={{ duration: 180 }}>
 			<div class="panel home-panel" in:scale={{ start: 0.98, duration: 220, easing: cubicOut }}>
 				<HomeTitle />
 				<p class="home-brief">
@@ -562,7 +562,10 @@
 			in:fade={{ duration: 160 }}
 			out:fade={{ duration: 120 }}
 		>
-			<div class="panel share-preview-panel" in:scale={{ start: 0.98, duration: 180, easing: cubicOut }}>
+			<div
+				class="panel share-preview-panel digi-scrollbar"
+				in:scale={{ start: 0.98, duration: 180, easing: cubicOut }}
+			>
 				<div class="share-preview-head">
 					<h2 id="share-preview-title">Share your run</h2>
 					<button class="close" type="button" onclick={closeSharePreview} disabled={shareBusy}>
@@ -942,17 +945,28 @@
 		z-index: 90;
 		background: rgba(5, 7, 10, 0.92);
 		backdrop-filter: blur(28px);
+		overflow-x: hidden;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		-webkit-overflow-scrolling: touch;
+		align-items: flex-start;
+		padding-block: max(1rem, env(safe-area-inset-top, 0px))
+			max(1.5rem, env(safe-area-inset-bottom, 0px));
+		min-height: 100%;
+		min-height: 100dvh;
 	}
 
 	.home-panel {
 		max-width: 720px;
 		width: 100%;
 		text-align: center;
+		margin-block: auto;
+		flex-shrink: 0;
 	}
 
 	.home-brief {
 		margin-top: 1.25rem;
-		margin-bottom: 3rem;
+		margin-bottom: 2rem;
 		font-size: clamp(1rem, 1.7vw, 1.15rem);
 		line-height: 1.7;
 		font-weight: 650;
@@ -1377,6 +1391,22 @@
 	}
 
 	@media (max-width: 900px) {
+		.home {
+			padding-inline: 1rem;
+		}
+
+		.home-brief {
+			margin-top: 1rem;
+			margin-bottom: 1.25rem;
+			font-size: 0.95rem;
+			line-height: 1.55;
+		}
+
+		.start {
+			padding: 1rem 0.85rem;
+			font-size: 1.1rem;
+		}
+
 		.hud {
 			inset-inline: 1.25rem;
 		}

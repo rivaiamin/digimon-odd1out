@@ -12,6 +12,13 @@
 }
 
 @layer base {
+	:root {
+		--scrollbar-size: 6px;
+		--scrollbar-track: rgba(255, 255, 255, 0.05);
+		--scrollbar-thumb: rgba(255, 157, 0, 0.42);
+		--scrollbar-thumb-hover: rgba(255, 157, 0, 0.72);
+	}
+
 	html,
 	body {
 		height: 100%;
@@ -22,6 +29,40 @@
 		color: #e0e0e0;
 		font-family: var(--font-sans);
 	}
+}
+
+/* Themed scrollbars for in-app scroll regions (home, modals, etc.) */
+.digi-scrollbar {
+	scrollbar-width: thin;
+	scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+.digi-scrollbar::-webkit-scrollbar {
+	width: var(--scrollbar-size);
+	height: var(--scrollbar-size);
+}
+
+.digi-scrollbar::-webkit-scrollbar-track {
+	background: var(--scrollbar-track);
+	border-radius: 999px;
+}
+
+.digi-scrollbar::-webkit-scrollbar-thumb {
+	background: linear-gradient(
+		180deg,
+		var(--scrollbar-thumb-hover),
+		var(--scrollbar-thumb)
+	);
+	border-radius: 999px;
+	border: 1px solid rgba(5, 7, 10, 0.35);
+}
+
+.digi-scrollbar::-webkit-scrollbar-thumb:hover {
+	background: var(--scrollbar-thumb-hover);
+}
+
+.digi-scrollbar::-webkit-scrollbar-corner {
+	background: transparent;
 }
 
 .digital-grid {

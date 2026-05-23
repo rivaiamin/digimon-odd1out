@@ -4,7 +4,7 @@
 </script>
 
 <div class="home-brand">
-	<img src={agumon} alt="Agumon" width="128" height="128" decoding="async" />
+	<img class="home-mascot" src={agumon} alt="Agumon" width="128" height="128" decoding="async" />
 	<p class="home-subtitle">
 		<span class="home-subtitle-box">
 			<span class="home-subtitle-text" aria-hidden="true">
@@ -37,6 +37,36 @@
 		flex-direction: column;
 		align-items: center;
 		gap: 0.75rem;
+	}
+
+	.home-mascot {
+		width: 128px;
+		height: 128px;
+		object-fit: contain;
+	}
+
+	@media (max-width: 900px) {
+		.home-brand {
+			gap: 0.5rem;
+		}
+
+		.home-mascot {
+			width: 88px;
+			height: 88px;
+		}
+
+		.home-title {
+			font-size: clamp(1.85rem, 8vw, 2.6rem);
+		}
+
+		.home-subtitle {
+			font-size: 0.65rem;
+			letter-spacing: 0.28em;
+		}
+
+		.home-subtitle-box {
+			padding: 0.35rem 0.85rem;
+		}
 	}
 
 	.sr-only {
