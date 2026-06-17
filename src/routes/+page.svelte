@@ -2,7 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import { fade, fly, scale } from 'svelte/transition';
 	import { cubicOut, quintOut } from 'svelte/easing';
-	import { RefreshCw, Share2 } from 'lucide-svelte';
+	import { AlertTriangle, RefreshCw, Share2 } from 'lucide-svelte';
 	import type { GameState, Puzzle } from '$lib/game/types';
 	import { GAME, SCENE } from '$lib/game/constants';
 	import { fetchPuzzle } from '$lib/game/puzzleClient';
@@ -27,6 +27,22 @@
 
 	let puzzle = $state<Puzzle | null>(null);
 	let loading = $state(false);
+	let puzzleError = $state<string | null>(null);
+
+	function formatPuzzleError(err: unknown): string {
+		const message = err instanceof Error ? err.message : 'Failed to load the next puzzle.';
+		if (message.includes('export:digimon') || message.includes('Not enough data')) {
+			return 'Digimon data is not ready yet. If you are running locally, run pnpm export:digimon and try again.';
+		}
+		if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
+			return 'Could not reach the server. Check your connection and try again.';
+		}
+		return message;
+	}
+
+	function dismissPuzzleError() {
+		puzzleError = null;
+	}
 	let score = $state(0);
 	let lives = $state<number>(GAME.startingLives);
 	let selectedIndex = $state<number | null>(null);
@@ -69,14 +85,33 @@
 
 	async function fetchNewPuzzle() {
 		clearTimers();
+		const snapshot = {
+			hadPuzzle: puzzle !== null,
+			gameState,
+			isFlipped,
+			selectedIndex,
+			guessStartMs
+		};
+
 		loading = true;
-		gameState = 'dealing';
-		isFlipped = false;
-		guessStartMs = null;
-		selectedIndex = null;
+		puzzleError = null;
+
+		if (!snapshot.hadPuzzle) {
+			gameState = 'dealing';
+			isFlipped = false;
+			guessStartMs = null;
+			selectedIndex = null;
+		}
+
 		try {
 			const newPuzzle = await fetchPuzzle();
 			puzzle = newPuzzle;
+			puzzleError = null;
+
+			gameState = 'dealing';
+			isFlipped = false;
+			guessStartMs = null;
+			selectedIndex = null;
 
 			dealTimeout = setTimeout(() => {
 				gameState = 'guessing';
@@ -88,6 +123,14 @@
 			}, GAME.dealFlipDelayMs);
 		} catch (err) {
 			console.error('Failed to fetch puzzle', err);
+			puzzleError = formatPuzzleError(err);
+
+			if (snapshot.hadPuzzle) {
+				gameState = snapshot.gameState;
+				isFlipped = snapshot.isFlipped;
+				selectedIndex = snapshot.selectedIndex;
+				guessStartMs = snapshot.guessStartMs;
+			}
 		} finally {
 			loading = false;
 		}
@@ -489,6 +532,46 @@
 					<button class="close" type="button" onclick={() => (showLogicLog = false)}>Close</button>
 				</div>
 				<p class="log-text">{logicText}</p>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Puzzle fetch error -->
+	{#if started && puzzleError && !loading}
+		<div
+			class="overlay puzzle-error"
+			class:is-blocking={!puzzle}
+			role="alertdialog"
+			aria-modal="true"
+			aria-labelledby="puzzle-error-title"
+			aria-describedby="puzzle-error-desc"
+			tabindex="0"
+			onkeydown={(e) => {
+				if (e.key === 'Escape' && puzzle) dismissPuzzleError();
+			}}
+			in:fade={{ duration: 160 }}
+			out:fade={{ duration: 140 }}
+		>
+			<div class="panel puzzle-error-panel" in:scale={{ start: 0.98, duration: 180, easing: cubicOut }}>
+				<div class="badge puzzle-error-badge" aria-hidden="true">
+					<AlertTriangle class="badge-icon" />
+				</div>
+				<h2 id="puzzle-error-title">SIGNAL LOST</h2>
+				<p id="puzzle-error-desc" class="puzzle-error-message">{puzzleError}</p>
+				{#if puzzle}
+					<p class="sub">Your last puzzle is still on screen. Retry when you are ready.</p>
+				{/if}
+
+				<div class="puzzle-error-actions">
+					<button class="restart" type="button" onclick={fetchNewPuzzle}>
+						<span>Retry sync</span>
+					</button>
+					{#if puzzle}
+						<button class="close" type="button" onclick={dismissPuzzleError}>
+							Dismiss
+						</button>
+					{/if}
+				</div>
 			</div>
 		</div>
 	{/if}
@@ -1010,6 +1093,53 @@
 		backdrop-filter: blur(24px);
 		flex-direction: column;
 		text-align: center;
+	}
+
+	.puzzle-error {
+		z-index: 85;
+		background: rgba(5, 7, 10, 0.72);
+		backdrop-filter: blur(20px);
+	}
+
+	.puzzle-error.is-blocking {
+		background: rgba(5, 7, 10, 0.92);
+		backdrop-filter: blur(28px);
+	}
+
+	.puzzle-error-panel {
+		max-width: min(520px, 100%);
+		text-align: center;
+	}
+
+	.puzzle-error-badge {
+		border-color: rgba(255, 0, 122, 0.45);
+		background: rgba(255, 0, 122, 0.12);
+		color: #ff007a;
+	}
+
+	.puzzle-error-panel h2 {
+		margin: 0 0 0.75rem;
+		font-size: clamp(1.85rem, 4vw, 2.5rem);
+		font-weight: 900;
+		font-style: italic;
+		letter-spacing: -0.03em;
+		color: white;
+	}
+
+	.puzzle-error-message {
+		margin: 0 0 0.75rem;
+		font-size: 1rem;
+		line-height: 1.55;
+		color: rgb(226 232 240);
+	}
+
+	.puzzle-error-panel .sub {
+		margin: 0 0 1.25rem;
+	}
+
+	.puzzle-error-actions {
+		display: grid;
+		gap: 0.75rem;
 	}
 
 	.spinner {
