@@ -284,7 +284,7 @@
 	const logicText = $derived(
 		gameState === 'revealing' && puzzle
 			? puzzle.explanation
-			: 'Analyze the data nodes. Three entities share a structural compatibility tier. Identify the anomaly to resolve the loop.'
+			: 'Three cards share a hidden category. Find the outlier to reveal it.'
 	);
 
 	let showLogicLog = $state(false);
@@ -531,6 +531,9 @@
 					<p class="log-label">LOGIC_LOG_V2.04</p>
 					<button class="close" type="button" onclick={() => (showLogicLog = false)}>Close</button>
 				</div>
+				{#if gameState === 'revealing' && puzzle}
+					<p class="log-connection">Category: {puzzle.connection}</p>
+				{/if}
 				<p class="log-text">{logicText}</p>
 			</div>
 		</div>
@@ -898,6 +901,19 @@
 		font-style: italic;
 		font-weight: 600;
 		color: rgb(148 163 184);
+		max-width: 40ch;
+		margin-inline: auto;
+	}
+
+	.log-connection {
+		margin: 0 0 0.5rem;
+		font-size: 0.8rem;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: #fbbf24;
+		max-width: 40ch;
+		margin-inline: auto;
 	}
 
 	.log-btn {
@@ -1604,6 +1620,10 @@
 		}
 		.log-btn {
 			width: auto;
+		}
+		.log-text,
+		.log-connection {
+			max-width: 34ch;
 		}
 	}
 
