@@ -55,6 +55,12 @@
 	let dealTimeout: ReturnType<typeof setTimeout> | null = null;
 	let guessLimitTimeout: ReturnType<typeof setTimeout> | null = null;
 	let gameOverTimeout: ReturnType<typeof setTimeout> | null = null;
+	let fetchRequestSeq = 0;
+	let activeFetchRequestId = 0;
+	let dealTimerSeq = 0;
+	let activeDealTimerId: number | null = null;
+	let guessTimerSeq = 0;
+	let activeGuessTimerId: number | null = null;
 
 	function clearTimers() {
 		if (dealTimeout) clearTimeout(dealTimeout);
@@ -63,6 +69,8 @@
 		dealTimeout = null;
 		guessLimitTimeout = null;
 		gameOverTimeout = null;
+		activeDealTimerId = null;
+		activeGuessTimerId = null;
 	}
 
 	function applyWrongAnswer() {
@@ -75,16 +83,38 @@
 		}
 	}
 
-	function handleGuessTimeUp() {
+	function openLogicLog(source: 'button' | 'overlay' | 'close' | 'escape') {
+		showLogicLog = source === 'button' ? true : false;
+	}
+
+	function handleGuessTimeUp(meta?: { requestId: number; guessTimerId: number }) {
+		const staleByRequestId = meta?.requestId != null ? meta.requestId !== activeFetchRequestId : false;
+		const staleByGuessTimerId =
+			meta?.guessTimerId != null && activeGuessTimerId != null
+				? meta.guessTimerId !== activeGuessTimerId
+				: false;
+		if (staleByRequestId || staleByGuessTimerId) return;
 		guessLimitTimeout = null;
+		activeGuessTimerId = null;
 		if (gameState !== 'guessing') return;
+		if (showLogicLog) {
+			openLogicLog('close');
+		}
 		selectedIndex = null;
 		gameState = 'revealing';
 		applyWrongAnswer();
 	}
 
 	async function fetchNewPuzzle() {
+		if (loading) {
+			return;
+		}
+		if (showLogicLog) {
+			openLogicLog('close');
+		}
 		clearTimers();
+		const requestId = ++fetchRequestSeq;
+		activeFetchRequestId = requestId;
 		const snapshot = {
 			hadPuzzle: puzzle !== null,
 			gameState,
@@ -105,6 +135,9 @@
 
 		try {
 			const newPuzzle = await fetchPuzzle();
+			if (requestId !== activeFetchRequestId) {
+				return;
+			}
 			puzzle = newPuzzle;
 			puzzleError = null;
 
@@ -113,16 +146,29 @@
 			guessStartMs = null;
 			selectedIndex = null;
 
+			const dealTimerId = ++dealTimerSeq;
+			activeDealTimerId = dealTimerId;
 			dealTimeout = setTimeout(() => {
+				if (requestId !== activeFetchRequestId || dealTimerId !== activeDealTimerId) {
+					return;
+				}
 				gameState = 'guessing';
 				isFlipped = true;
 				const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
 				guessStartMs = now;
 				guessTickMs = now;
-				guessLimitTimeout = setTimeout(handleGuessTimeUp, GAME.guessTimeLimitMs);
+				const guessTimerId = ++guessTimerSeq;
+				activeGuessTimerId = guessTimerId;
+				guessLimitTimeout = setTimeout(
+					() => handleGuessTimeUp({ requestId, guessTimerId }),
+					GAME.guessTimeLimitMs
+				);
 			}, GAME.dealFlipDelayMs);
 		} catch (err) {
 			console.error('Failed to fetch puzzle', err);
+			if (requestId !== activeFetchRequestId) {
+				return;
+			}
 			puzzleError = formatPuzzleError(err);
 
 			if (snapshot.hadPuzzle) {
@@ -132,7 +178,9 @@
 				guessStartMs = snapshot.guessStartMs;
 			}
 		} finally {
-			loading = false;
+			if (requestId === activeFetchRequestId) {
+				loading = false;
+			}
 		}
 	}
 
@@ -142,6 +190,7 @@
 			clearTimeout(guessLimitTimeout);
 			guessLimitTimeout = null;
 		}
+		activeGuessTimerId = null;
 		selectedIndex = index;
 		gameState = 'revealing';
 
@@ -284,7 +333,7 @@
 	const logicText = $derived(
 		gameState === 'revealing' && puzzle
 			? puzzle.explanation
-			: 'Analyze the data nodes. Three entities share a structural compatibility tier. Identify the anomaly to resolve the loop.'
+			: 'Three cards share a hidden category. Find the outlier to reveal it.'
 	);
 
 	let showLogicLog = $state(false);
@@ -479,7 +528,7 @@
 	<!-- UI Overlay: Footer -->
 	<footer class="hud footer" class:is-hidden={!started}>
 		<div class="footer-left">
-			<button class="log-btn" type="button" onclick={() => (showLogicLog = true)}>
+			<button class="log-btn" type="button" onclick={() => openLogicLog('button')}>
 				View logic log
 			</button>
 		</div>
@@ -518,10 +567,10 @@
 			aria-label="Logic log"
 			tabindex="0"
 			onclick={(e) => {
-				if (e.currentTarget === e.target) showLogicLog = false;
+				if (e.currentTarget === e.target) openLogicLog('overlay');
 			}}
 			onkeydown={(e) => {
-				if (e.key === 'Escape') showLogicLog = false;
+				if (e.key === 'Escape') openLogicLog('escape');
 			}}
 			in:fade={{ duration: 140 }}
 			out:fade={{ duration: 120 }}
@@ -529,8 +578,11 @@
 			<div class="panel logic-log-panel" in:scale={{ start: 0.98, duration: 160, easing: cubicOut }}>
 				<div class="logic-log-head">
 					<p class="log-label">LOGIC_LOG_V2.04</p>
-					<button class="close" type="button" onclick={() => (showLogicLog = false)}>Close</button>
+					<button class="close" type="button" onclick={() => openLogicLog('close')}>Close</button>
 				</div>
+				{#if gameState === 'revealing' && puzzle}
+					<p class="log-connection">Category: {puzzle.connection}</p>
+				{/if}
 				<p class="log-text">{logicText}</p>
 			</div>
 		</div>
@@ -898,6 +950,19 @@
 		font-style: italic;
 		font-weight: 600;
 		color: rgb(148 163 184);
+		max-width: 40ch;
+		margin-inline: auto;
+	}
+
+	.log-connection {
+		margin: 0 0 0.5rem;
+		font-size: 0.8rem;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: #fbbf24;
+		max-width: 40ch;
+		margin-inline: auto;
 	}
 
 	.log-btn {
@@ -1604,6 +1669,10 @@
 		}
 		.log-btn {
 			width: auto;
+		}
+		.log-text,
+		.log-connection {
+			max-width: 34ch;
 		}
 	}
 
