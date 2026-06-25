@@ -3,6 +3,7 @@
 	import { fade, fly, scale } from 'svelte/transition';
 	import { cubicOut, quintOut } from 'svelte/easing';
 	import { AlertTriangle, RefreshCw, Share2 } from 'lucide-svelte';
+	import type { Attachment } from 'svelte/attachments';
 	import { GAME, SCENE } from '$lib/game/constants';
 	import { useGame } from '$lib/game/useGame.svelte';
 	import DigiCardDom from '$lib/components/DigiCardDom.svelte';
@@ -118,7 +119,6 @@
 	}
 
 	let viewportSize = $state({ width: 0, height: 0 });
-	let boardEl = $state<HTMLDivElement | null>(null);
 
 	let isMobile = $state(false);
 	let isPortrait = $state(false);
@@ -151,17 +151,16 @@
 		}
 	}
 
-	$effect(() => {
-		if (!boardEl) return;
+	const measureBoard: Attachment<HTMLDivElement> = (element) => {
 		const ro = new ResizeObserver(([entry]) => {
 			viewportSize = {
 				width: entry.contentRect.width,
 				height: entry.contentRect.height
 			};
 		});
-		ro.observe(boardEl);
+		ro.observe(element);
 		return () => ro.disconnect();
-	});
+	};
 
 	function computeCardSize(vw: number, vh: number) {
 		// Tune sizing so phones get smaller cards without changing desktop.
@@ -245,7 +244,7 @@
 
 	<!-- Card Viewport (DOM/CSS 3D) -->
 	<div class="viewport">
-		<div class="board" aria-label="Card board" bind:this={boardEl}>
+		<div class="board" aria-label="Card board" {@attach measureBoard}>
 			{#if game.puzzle}
 				{#each game.puzzle.cards as card, idx (card.name)}
 					<DigiCardDom
