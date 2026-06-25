@@ -80,10 +80,10 @@ Planning doc for post-MVP improvements. Organized as **epics** → **tasks** →
 
 #### Task 3.1 — Extract game logic
 
-- [ ] Create `src/lib/game/useGame.svelte.ts` (or `gameState.svelte.ts`)
-- [ ] Move timer management, `fetchNewPuzzle`, `handleSelect`, score/lives, and phase transitions
-- [ ] Keep `+page.svelte` as composition + layout only
-- [ ] Export typed API: `startGame`, `restartGame`, `fetchNewPuzzle`, state getters
+- [x] Create `src/lib/game/useGame.svelte.ts` (or `gameState.svelte.ts`)
+- [x] Move timer management, `fetchNewPuzzle`, `handleSelect`, score/lives, and phase transitions
+- [x] Keep `+page.svelte` as composition + layout only
+- [x] Export typed API: `startGame`, `restartGame`, `fetchNewPuzzle`, state getters
 
 #### Task 3.2 — Extract overlay components
 
