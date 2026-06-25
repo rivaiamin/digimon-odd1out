@@ -3,9 +3,8 @@
 	import { fade, fly, scale } from 'svelte/transition';
 	import { cubicOut, quintOut } from 'svelte/easing';
 	import { AlertTriangle, RefreshCw, Share2 } from 'lucide-svelte';
-	import type { GameState, Puzzle } from '$lib/game/types';
 	import { GAME, SCENE } from '$lib/game/constants';
-	import { fetchPuzzle } from '$lib/game/puzzleClient';
+	import { useGame } from '$lib/game/useGame.svelte';
 	import DigiCardDom from '$lib/components/DigiCardDom.svelte';
 	import HomeTitle from '$lib/components/HomeTitle.svelte';
 	import ShareResultCard from '$lib/components/ShareResultCard.svelte';
@@ -18,200 +17,25 @@
 	} from '$lib/share/shareResult';
 	import { computeHandLayout } from '$lib/ui/handLayout';
 
-	let started = $state(false);
 	let showSharePreview = $state(false);
 	let shareBusy = $state(false);
 	let shareMessage = $state<string | null>(null);
 	let shareCaptureEl = $state<HTMLElement | null>(null);
 	let shareCapturing = $state(false);
-
-	let puzzle = $state<Puzzle | null>(null);
-	let loading = $state(false);
-	let puzzleError = $state<string | null>(null);
-
-	function formatPuzzleError(err: unknown): string {
-		const message = err instanceof Error ? err.message : 'Failed to load the next puzzle.';
-		if (message.includes('export:digimon') || message.includes('Not enough data')) {
-			return 'Digimon data is not ready yet. If you are running locally, run pnpm export:digimon and try again.';
-		}
-		if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
-			return 'Could not reach the server. Check your connection and try again.';
-		}
-		return message;
-	}
-
-	function dismissPuzzleError() {
-		puzzleError = null;
-	}
-	let score = $state(0);
-	let lives = $state<number>(GAME.startingLives);
-	let selectedIndex = $state<number | null>(null);
-	let gameState = $state<GameState>('dealing');
-	let isFlipped = $state(false);
-	let guessStartMs = $state<number | null>(null);
-	/** High-frequency clock while guessing; drives HUD countdown only. */
-	let guessTickMs = $state(0);
-
-	let dealTimeout: ReturnType<typeof setTimeout> | null = null;
-	let guessLimitTimeout: ReturnType<typeof setTimeout> | null = null;
-	let gameOverTimeout: ReturnType<typeof setTimeout> | null = null;
-	let fetchRequestSeq = 0;
-	let activeFetchRequestId = 0;
-	let dealTimerSeq = 0;
-	let activeDealTimerId: number | null = null;
-	let guessTimerSeq = 0;
-	let activeGuessTimerId: number | null = null;
-
-	function clearTimers() {
-		if (dealTimeout) clearTimeout(dealTimeout);
-		if (guessLimitTimeout) clearTimeout(guessLimitTimeout);
-		if (gameOverTimeout) clearTimeout(gameOverTimeout);
-		dealTimeout = null;
-		guessLimitTimeout = null;
-		gameOverTimeout = null;
-		activeDealTimerId = null;
-		activeGuessTimerId = null;
-	}
-
-	function applyWrongAnswer() {
-		const nextLives = lives - 1;
-		lives = nextLives;
-		if (nextLives <= 0) {
-			gameOverTimeout = setTimeout(() => {
-				gameState = 'gameOver';
-			}, GAME.gameOverDelayMs);
-		}
-	}
+	let showLogicLog = $state(false);
 
 	function openLogicLog(source: 'button' | 'overlay' | 'close' | 'escape') {
 		showLogicLog = source === 'button' ? true : false;
 	}
 
-	function handleGuessTimeUp(meta?: { requestId: number; guessTimerId: number }) {
-		const staleByRequestId = meta?.requestId != null ? meta.requestId !== activeFetchRequestId : false;
-		const staleByGuessTimerId =
-			meta?.guessTimerId != null && activeGuessTimerId != null
-				? meta.guessTimerId !== activeGuessTimerId
-				: false;
-		if (staleByRequestId || staleByGuessTimerId) return;
-		guessLimitTimeout = null;
-		activeGuessTimerId = null;
-		if (gameState !== 'guessing') return;
-		if (showLogicLog) {
-			openLogicLog('close');
-		}
-		selectedIndex = null;
-		gameState = 'revealing';
-		applyWrongAnswer();
-	}
-
-	async function fetchNewPuzzle() {
-		if (loading) {
-			return;
-		}
-		if (showLogicLog) {
-			openLogicLog('close');
-		}
-		clearTimers();
-		const requestId = ++fetchRequestSeq;
-		activeFetchRequestId = requestId;
-		const snapshot = {
-			hadPuzzle: puzzle !== null,
-			gameState,
-			isFlipped,
-			selectedIndex,
-			guessStartMs
-		};
-
-		loading = true;
-		puzzleError = null;
-
-		if (!snapshot.hadPuzzle) {
-			gameState = 'dealing';
-			isFlipped = false;
-			guessStartMs = null;
-			selectedIndex = null;
-		}
-
-		try {
-			const newPuzzle = await fetchPuzzle();
-			if (requestId !== activeFetchRequestId) {
-				return;
-			}
-			puzzle = newPuzzle;
-			puzzleError = null;
-
-			gameState = 'dealing';
-			isFlipped = false;
-			guessStartMs = null;
-			selectedIndex = null;
-
-			const dealTimerId = ++dealTimerSeq;
-			activeDealTimerId = dealTimerId;
-			dealTimeout = setTimeout(() => {
-				if (requestId !== activeFetchRequestId || dealTimerId !== activeDealTimerId) {
-					return;
-				}
-				gameState = 'guessing';
-				isFlipped = true;
-				const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
-				guessStartMs = now;
-				guessTickMs = now;
-				const guessTimerId = ++guessTimerSeq;
-				activeGuessTimerId = guessTimerId;
-				guessLimitTimeout = setTimeout(
-					() => handleGuessTimeUp({ requestId, guessTimerId }),
-					GAME.guessTimeLimitMs
-				);
-			}, GAME.dealFlipDelayMs);
-		} catch (err) {
-			console.error('Failed to fetch puzzle', err);
-			if (requestId !== activeFetchRequestId) {
-				return;
-			}
-			puzzleError = formatPuzzleError(err);
-
-			if (snapshot.hadPuzzle) {
-				gameState = snapshot.gameState;
-				isFlipped = snapshot.isFlipped;
-				selectedIndex = snapshot.selectedIndex;
-				guessStartMs = snapshot.guessStartMs;
-			}
-		} finally {
-			if (requestId === activeFetchRequestId) {
-				loading = false;
-			}
-		}
-	}
-
-	function handleSelect(index: number) {
-		if (gameState !== 'guessing') return;
-		if (guessLimitTimeout) {
-			clearTimeout(guessLimitTimeout);
-			guessLimitTimeout = null;
-		}
-		activeGuessTimerId = null;
-		selectedIndex = index;
-		gameState = 'revealing';
-
-		if (index === puzzle?.answer_index) {
-			const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
-			const elapsed = guessStartMs == null ? GAME.scoreSpeedWindowMs : Math.max(0, now - guessStartMs);
-			const t = Math.min(1, elapsed / GAME.scoreSpeedWindowMs); // 0..1
-			const speedBonus = Math.round(GAME.scoreSpeedBonusMax * (1 - t));
-			score = score + GAME.scorePerCorrect + speedBonus;
-			return;
-		}
-
-		applyWrongAnswer();
-	}
-
-	function restartGame() {
+	function closeSharePreviewForRestart() {
 		showSharePreview = false;
-		score = 0;
-		lives = GAME.startingLives;
-		fetchNewPuzzle();
 	}
+
+	const game = useGame({
+		closeLogicLog: () => openLogicLog('close'),
+		closeSharePreview: closeSharePreviewForRestart
+	});
 
 	const playUrl = $derived.by(() => {
 		if (typeof window === 'undefined') return '';
@@ -264,8 +88,8 @@
 
 		try {
 			const blob = await captureShareCard(captureTarget);
-			const filename = getShareFilename(score);
-			const text = getShareText(score, playUrl);
+			const filename = getShareFilename(game.score);
+			const text = getShareText(game.score, playUrl);
 
 			if (mode === 'download') {
 				downloadShareImage(blob, filename);
@@ -293,51 +117,6 @@
 		}
 	}
 
-	function startGame() {
-		started = true;
-		restartGame();
-	}
-
-	onMount(() => () => clearTimers());
-
-	const guessRemainingMs = $derived.by(() => {
-		if (gameState !== 'guessing' || guessStartMs == null) return 0;
-		const tick = guessTickMs;
-		return Math.max(0, guessStartMs + GAME.guessTimeLimitMs - tick);
-	});
-
-	const guessSecondsLabel = $derived(
-		gameState === 'guessing' ? Math.ceil(guessRemainingMs / 1000) : null
-	);
-
-	const guessBarPct = $derived(
-		gameState === 'guessing'
-			? Math.min(100, Math.max(0, (guessRemainingMs / GAME.guessTimeLimitMs) * 100))
-			: 100
-	);
-
-	$effect(() => {
-		if (gameState !== 'guessing') return;
-		let cancelled = false;
-		function loop() {
-			if (cancelled) return;
-			guessTickMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
-			requestAnimationFrame(loop);
-		}
-		requestAnimationFrame(loop);
-		return () => {
-			cancelled = true;
-		};
-	});
-
-	const logicText = $derived(
-		gameState === 'revealing' && puzzle
-			? puzzle.explanation
-			: 'Three cards share a hidden category. Find the outlier to reveal it.'
-	);
-
-	let showLogicLog = $state(false);
-
 	let viewportSize = $state({ width: 0, height: 0 });
 	let boardEl = $state<HTMLDivElement | null>(null);
 
@@ -361,8 +140,7 @@
 				await document.documentElement.requestFullscreen?.();
 			}
 			// Best-effort: works on some Android browsers, limited on iOS.
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const orientation = (screen as any)?.orientation;
+			const orientation = screen.orientation;
 			if (orientation?.lock) {
 				await orientation.lock('landscape');
 			}
@@ -404,7 +182,7 @@
 	}
 
 	const cardLayout = $derived.by(() => {
-		const cards = puzzle?.cards ?? [];
+		const cards = game.puzzle?.cards ?? [];
 		if (!viewportSize.width || !viewportSize.height) return [];
 
 		const { cardWidth, cardHeight } = computeCardSize(viewportSize.width, viewportSize.height);
@@ -444,8 +222,13 @@
 	<div class="digital-grid" aria-hidden="true"></div>
 	<div class="glow-orb" aria-hidden="true"></div>
 
-	{#if !started}
-		<div class="overlay home digi-scrollbar" role="dialog" aria-modal="true" in:fade={{ duration: 180 }}>
+	{#if !game.started}
+		<div
+			class="overlay home digi-scrollbar"
+			role="dialog"
+			aria-modal="true"
+			in:fade={{ duration: 180 }}
+		>
 			<div class="panel home-panel" in:scale={{ start: 0.98, duration: 220, easing: cubicOut }}>
 				<HomeTitle />
 				<p class="home-brief">
@@ -453,7 +236,7 @@
 					odd one out to stabilize the loop.
 				</p>
 
-				<button class="start" type="button" onclick={startGame}>
+				<button class="start" type="button" onclick={game.startGame}>
 					<span>Start</span>
 				</button>
 			</div>
@@ -463,17 +246,17 @@
 	<!-- Card Viewport (DOM/CSS 3D) -->
 	<div class="viewport">
 		<div class="board" aria-label="Card board" bind:this={boardEl}>
-			{#if puzzle}
-				{#each puzzle.cards as card, idx (card.name)}
+			{#if game.puzzle}
+				{#each game.puzzle.cards as card, idx (card.name)}
 					<DigiCardDom
 						name={card.name}
 						imageUrl={card.imageUrl ?? ''}
-						{isFlipped}
-						isSelected={selectedIndex === idx}
-						isCorrect={puzzle.answer_index === idx}
-						isRevealed={gameState === 'revealing'}
+						isFlipped={game.isFlipped}
+						isSelected={game.selectedIndex === idx}
+						isCorrect={game.puzzle.answer_index === idx}
+						isRevealed={game.gameState === 'revealing'}
 						style={`${cardSizeStyle} transform:${cardLayout[idx]?.transform ?? ''}; z-index:${cardLayout[idx]?.zIndex ?? 0};`}
-						onClick={() => handleSelect(idx)}
+						onClick={() => game.handleSelect(idx)}
 					/>
 				{/each}
 			{/if}
@@ -481,7 +264,7 @@
 	</div>
 
 	<!-- UI Overlay: Header -->
-	<header class="hud header" class:is-hidden={!started}>
+	<header class="hud header" class:is-hidden={!game.started}>
 		<div
 			class="title"
 			in:fly={{ x: -20, duration: 420, easing: quintOut }}
@@ -495,17 +278,17 @@
 			in:fly={{ x: 20, duration: 420, easing: quintOut }}
 			out:fade={{ duration: 140 }}
 		>
-			<div class="stat timer" class:is-active={gameState === 'guessing'}>
+			<div class="stat timer" class:is-active={game.gameState === 'guessing'}>
 				<p class="label">Resolve window</p>
 				<p class="value timer-value" aria-live="polite">
-					{#if gameState === 'guessing'}
-						{guessSecondsLabel}<span class="timer-suffix">s</span>
+					{#if game.gameState === 'guessing'}
+						{game.guessSecondsLabel}<span class="timer-suffix">s</span>
 					{:else}
 						<span class="timer-idle">—</span>
 					{/if}
 				</p>
 				<div class="timer-track" aria-hidden="true">
-					<div class="timer-fill" style={`width:${guessBarPct}%;`}></div>
+					<div class="timer-fill" style={`width:${game.guessBarPct}%;`}></div>
 				</div>
 			</div>
 
@@ -513,20 +296,20 @@
 				<p class="label">Lives Remaining</p>
 				<div class="bars">
 					{#each Array.from({ length: GAME.startingLives }, (_, i) => i) as i (i)}
-						<div class="bar" class:is-on={i < lives}></div>
+						<div class="bar" class:is-on={i < game.lives}></div>
 					{/each}
 				</div>
 			</div>
 
 			<div class="stat score">
 				<p class="label">Synchro Score</p>
-				<p class="value">{score.toLocaleString()}</p>
+				<p class="value">{game.score.toLocaleString()}</p>
 			</div>
 		</div>
 	</header>
 
 	<!-- UI Overlay: Footer -->
-	<footer class="hud footer" class:is-hidden={!started}>
+	<footer class="hud footer" class:is-hidden={!game.started}>
 		<div class="footer-left">
 			<button class="log-btn" type="button" onclick={() => openLogicLog('button')}>
 				View logic log
@@ -534,12 +317,12 @@
 		</div>
 
 		<div class="footer-right" aria-live="polite">
-			{#key gameState === 'revealing' ? 'next' : 'sync'}
-				{#if gameState === 'revealing' && lives > 0}
+			{#key game.gameState === 'revealing' ? 'next' : 'sync'}
+				{#if game.gameState === 'revealing' && game.lives > 0}
 					<button
 						class="next"
 						type="button"
-						onclick={fetchNewPuzzle}
+						onclick={game.fetchNewPuzzle}
 						in:fly={{ x: 10, duration: 200, easing: cubicOut }}
 						out:fly={{ x: -10, duration: 160, easing: cubicOut }}
 					>
@@ -559,7 +342,7 @@
 		</div>
 	</footer>
 
-	{#if started && showLogicLog}
+	{#if game.started && showLogicLog}
 		<div
 			class="overlay logic-log"
 			role="dialog"
@@ -575,53 +358,57 @@
 			in:fade={{ duration: 140 }}
 			out:fade={{ duration: 120 }}
 		>
-			<div class="panel logic-log-panel" in:scale={{ start: 0.98, duration: 160, easing: cubicOut }}>
+			<div
+				class="panel logic-log-panel"
+				in:scale={{ start: 0.98, duration: 160, easing: cubicOut }}
+			>
 				<div class="logic-log-head">
 					<p class="log-label">LOGIC_LOG_V2.04</p>
 					<button class="close" type="button" onclick={() => openLogicLog('close')}>Close</button>
 				</div>
-				{#if gameState === 'revealing' && puzzle}
-					<p class="log-connection">Category: {puzzle.connection}</p>
+				{#if game.gameState === 'revealing' && game.puzzle}
+					<p class="log-connection">Category: {game.puzzle.connection}</p>
 				{/if}
-				<p class="log-text">{logicText}</p>
+				<p class="log-text">{game.logicText}</p>
 			</div>
 		</div>
 	{/if}
 
 	<!-- Puzzle fetch error -->
-	{#if started && puzzleError && !loading}
+	{#if game.started && game.puzzleError && !game.loading}
 		<div
 			class="overlay puzzle-error"
-			class:is-blocking={!puzzle}
+			class:is-blocking={!game.puzzle}
 			role="alertdialog"
 			aria-modal="true"
 			aria-labelledby="puzzle-error-title"
 			aria-describedby="puzzle-error-desc"
 			tabindex="0"
 			onkeydown={(e) => {
-				if (e.key === 'Escape' && puzzle) dismissPuzzleError();
+				if (e.key === 'Escape' && game.puzzle) game.dismissPuzzleError();
 			}}
 			in:fade={{ duration: 160 }}
 			out:fade={{ duration: 140 }}
 		>
-			<div class="panel puzzle-error-panel" in:scale={{ start: 0.98, duration: 180, easing: cubicOut }}>
+			<div
+				class="panel puzzle-error-panel"
+				in:scale={{ start: 0.98, duration: 180, easing: cubicOut }}
+			>
 				<div class="badge puzzle-error-badge" aria-hidden="true">
 					<AlertTriangle class="badge-icon" />
 				</div>
 				<h2 id="puzzle-error-title">SIGNAL LOST</h2>
-				<p id="puzzle-error-desc" class="puzzle-error-message">{puzzleError}</p>
-				{#if puzzle}
+				<p id="puzzle-error-desc" class="puzzle-error-message">{game.puzzleError}</p>
+				{#if game.puzzle}
 					<p class="sub">Your last puzzle is still on screen. Retry when you are ready.</p>
 				{/if}
 
 				<div class="puzzle-error-actions">
-					<button class="restart" type="button" onclick={fetchNewPuzzle}>
+					<button class="restart" type="button" onclick={game.fetchNewPuzzle}>
 						<span>Retry sync</span>
 					</button>
-					{#if puzzle}
-						<button class="close" type="button" onclick={dismissPuzzleError}>
-							Dismiss
-						</button>
+					{#if game.puzzle}
+						<button class="close" type="button" onclick={game.dismissPuzzleError}> Dismiss </button>
 					{/if}
 				</div>
 			</div>
@@ -629,7 +416,7 @@
 	{/if}
 
 	<!-- Loading Overlay -->
-	{#if started && loading}
+	{#if game.started && game.loading}
 		<div
 			class="overlay loading"
 			role="status"
@@ -648,7 +435,7 @@
 	{/if}
 
 	<!-- Game Over Overlay -->
-	{#if started && gameState === 'gameOver'}
+	{#if game.started && game.gameState === 'gameOver'}
 		<div
 			class="overlay gameover"
 			role="dialog"
@@ -665,7 +452,7 @@
 
 				<div class="result">
 					<p class="result-label">Cycle Potential Result</p>
-					<p class="result-score">{score}</p>
+					<p class="result-score">{game.score}</p>
 				</div>
 
 				<div class="gameover-actions">
@@ -673,7 +460,7 @@
 						<Share2 class="share-open-icon" aria-hidden="true" />
 						<span>Share Result</span>
 					</button>
-					<button class="restart" type="button" onclick={restartGame}>
+					<button class="restart" type="button" onclick={game.restartGame}>
 						<span>Initialize Reboot</span>
 					</button>
 				</div>
@@ -708,8 +495,8 @@
 					</button>
 				</div>
 				<p class="share-preview-hint">
-					This is what others will see. On desktop, Save image downloads a PNG; Share may also open a
-					link share dialog.
+					This is what others will see. On desktop, Save image downloads a PNG; Share may also open
+					a link share dialog.
 				</p>
 
 				{#if shareMessage}
@@ -718,7 +505,7 @@
 
 				<div class="share-preview-frame" aria-hidden={shareBusy}>
 					<div class="share-preview-scaler">
-						<ShareResultCard {score} playUrl={playUrl} />
+						<ShareResultCard score={game.score} {playUrl} />
 					</div>
 				</div>
 
@@ -745,13 +532,13 @@
 	{/if}
 
 	<div class="share-capture-host" class:is-capturing={shareCapturing} aria-hidden="true">
-		<ShareResultCard bind:root={shareCaptureEl} {score} playUrl={playUrl} />
+		<ShareResultCard bind:root={shareCaptureEl} score={game.score} {playUrl} />
 	</div>
 
 	<!-- Scanlines -->
 	<div class="scanline" aria-hidden="true"></div>
 
-	{#if started && isMobile && isPortrait}
+	{#if game.started && isMobile && isPortrait}
 		<div class="overlay rotate" role="dialog" aria-modal="true">
 			<div class="panel rotate-panel" in:scale={{ start: 0.98, duration: 180, easing: cubicOut }}>
 				<h2>ROTATE DEVICE</h2>
@@ -977,7 +764,9 @@
 		text-transform: uppercase;
 		font-size: 0.7rem;
 		cursor: pointer;
-		transition: background 150ms ease, border-color 150ms ease;
+		transition:
+			background 150ms ease,
+			border-color 150ms ease;
 	}
 
 	.log-btn:hover {
