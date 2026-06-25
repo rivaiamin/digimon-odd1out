@@ -366,7 +366,7 @@
 					<button class="close" type="button" onclick={() => openLogicLog('close')}>Close</button>
 				</div>
 				{#if game.gameState === 'revealing' && game.puzzle}
-					<p class="log-connection">Category: {game.puzzle.connection}</p>
+					<p class="log-connection"><span>Shared trait</span>{game.puzzle.connection}</p>
 				{/if}
 				<p class="log-text">{game.logicText}</p>
 			</div>
@@ -731,24 +731,36 @@
 	}
 
 	.log-text {
-		font-size: 0.95rem;
-		line-height: 1.6;
+		font-size: clamp(0.95rem, 1.3vw, 1.05rem);
+		line-height: 1.65;
 		font-style: italic;
 		font-weight: 600;
 		color: rgb(148 163 184);
-		max-width: 40ch;
+		max-width: 46ch;
 		margin-inline: auto;
+		overflow-wrap: break-word;
 	}
 
 	.log-connection {
-		margin: 0 0 0.5rem;
-		font-size: 0.8rem;
+		display: grid;
+		gap: 0.35rem;
+		margin: 0 auto 0.75rem;
+		font-size: clamp(0.95rem, 1.4vw, 1.05rem);
+		line-height: 1.45;
 		font-weight: 800;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
 		color: #fbbf24;
-		max-width: 40ch;
-		margin-inline: auto;
+		max-width: 46ch;
+		overflow-wrap: break-word;
+	}
+
+	.log-connection span {
+		font-family:
+			ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+			monospace;
+		font-size: 10px;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		color: rgba(251, 191, 36, 0.72);
 	}
 
 	.log-btn {
@@ -837,8 +849,12 @@
 	}
 
 	.logic-log-panel {
-		max-width: 760px;
+		max-width: min(760px, 100%);
 		width: 100%;
+		max-height: min(82vh, 34rem);
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		-webkit-overflow-scrolling: touch;
 	}
 
 	.logic-log-head {
@@ -1458,9 +1474,24 @@
 		.log-btn {
 			width: auto;
 		}
+		.logic-log {
+			padding: 1rem;
+		}
+		.logic-log-panel {
+			max-width: min(100%, 32rem);
+			max-height: min(76vh, 28rem);
+		}
+		.logic-log-head {
+			gap: 0.75rem;
+			margin-bottom: 0.85rem;
+		}
 		.log-text,
 		.log-connection {
-			max-width: 34ch;
+			max-width: 32ch;
+		}
+		.log-text {
+			font-size: 0.95rem;
+			line-height: 1.6;
 		}
 	}
 

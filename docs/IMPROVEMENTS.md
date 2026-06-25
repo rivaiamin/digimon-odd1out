@@ -51,9 +51,9 @@ Planning doc for post-MVP improvements. Organized as **epics** → **tasks** →
 
 #### Task 2.1 — Reveal screen copy
 
-- [ ] Show `puzzle.connection` in the logic log on reveal (before or above `explanation`)
-- [ ] Replace generic pre-reveal logic log text with a hint that a category exists (without spoiling the answer)
-- [ ] Ensure copy reads well on mobile (logic log panel)
+- [x] Show `puzzle.connection` in the logic log on reveal (before or above `explanation`)
+- [x] Replace generic pre-reveal logic log text with a hint that a category exists (without spoiling the answer)
+- [x] Ensure copy reads well on mobile (logic log panel)
 
 #### Task 2.2 — Speed bonus feedback
 
