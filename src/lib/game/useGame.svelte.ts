@@ -42,7 +42,7 @@ class GameController {
 	logicText = $derived(
 		this.gameState === 'revealing' && this.puzzle
 			? this.puzzle.explanation
-			: 'Three cards share a hidden category. Find the outlier to reveal it.'
+			: 'Three cards are linked by one hidden category. Pick the one that breaks the pattern to reveal it.'
 	);
 
 	private dealTimeout: ReturnType<typeof setTimeout> | null = null;
