@@ -1,7 +1,10 @@
 <script lang="ts">
+	import { CARD_BACK_IMAGE } from '$lib/game/constants';
+
 	type Props = {
 		name: string;
 		imageUrl: string;
+		shortcut: number;
 		isFlipped: boolean;
 		isSelected: boolean;
 		isCorrect?: boolean;
@@ -13,6 +16,7 @@
 	let {
 		name,
 		imageUrl,
+		shortcut,
 		isFlipped,
 		isSelected,
 		isCorrect = false,
@@ -25,80 +29,76 @@
 	const isLongName = $derived(nameLen > 20);
 	const isVeryLongName = $derived(nameLen > 28);
 
-	let wrapperEl = $state<HTMLButtonElement | null>(null);
-	let tiltX = $state(0);
-	let tiltY = $state(0);
-
-	function attachWrapperEl(node: HTMLButtonElement) {
-		wrapperEl = node;
-		return () => {
-			if (wrapperEl === node) wrapperEl = null;
-		};
-	}
-
-	function borderColor() {
-		if (isRevealed) return isCorrect ? '#ff9d00' : '#ff007a';
-		return isSelected ? '#ff9d00' : 'rgba(255, 157, 0, 0.55)';
-	}
-
-	function handlePointerMove(e: PointerEvent) {
-		if (!wrapperEl) return;
-		const rect = wrapperEl.getBoundingClientRect();
-		const px = (e.clientX - rect.left) / rect.width; // 0..1
-		const py = (e.clientY - rect.top) / rect.height; // 0..1
-		const nx = (px - 0.5) * 2; // -1..1
-		const ny = (py - 0.5) * 2; // -1..1
-
-		// small, premium tilt range
-		tiltX = ny * -10;
-		tiltY = nx * 12;
-	}
-
-	function handlePointerLeave() {
-		tiltX = 0;
-		tiltY = 0;
+	function frameAccent() {
+		if (isRevealed) return isCorrect ? 'var(--digi-correct)' : 'var(--digi-wrong)';
+		if (isSelected) return 'var(--digi-gold-hi)';
+		return 'var(--digi-gold-mid)';
 	}
 </script>
 
 <button
-	class="card-wrapper"
+	class={[
+		'card-wrapper',
+		{
+			'is-selected': isSelected,
+			'is-revealed': isRevealed,
+			'is-correct': isCorrect,
+			'is-face-up': isFlipped
+		}
+	]}
 	type="button"
-	aria-label={`Card ${name}`}
-	style={`--border:${borderColor()}; --tiltX:${tiltX}deg; --tiltY:${tiltY}deg; ${style}`}
-	onpointermove={handlePointerMove}
-	onpointerleave={handlePointerLeave}
+	aria-label={`Card ${shortcut}: ${name}. Press ${shortcut} to choose.`}
+	style={`--frame-accent:${frameAccent()}; ${style}`}
 	onclick={(e) => {
 		e.stopPropagation();
 		onClick();
 	}}
-	{@attach attachWrapperEl}
 >
-	<div class="card-visual" class:is-flipped={isFlipped}>
-		<div class="card-face card-back" aria-hidden="true">
-			<div class="back-grid"></div>
-		</div>
+	<div class="card-motion">
+		{#if isFlipped}
+			<div class="card-surface card-front">
+				<div class="frame-outer">
+					<div class="frame-inner">
+						<div class="corner corner-tl" aria-hidden="true"></div>
+						<span class="card-shortcut" aria-hidden="true">{shortcut}</span>
+						<div class="corner corner-tr" aria-hidden="true"></div>
 
-		<div class="card-face card-front">
-			<div class="front-border"></div>
-			<div class="front-inner">
-				<div class="art">
-					{#if imageUrl}
-						<img src={imageUrl} alt={name} draggable="false" />
-					{/if}
-					<div class="scanlines" aria-hidden="true"></div>
+						<div class="art-window">
+							{#if imageUrl}
+								<img src={imageUrl} alt={name} draggable="false" />
+							{/if}
+						</div>
+
+						<div class="name-band">
+							<p class={['name', { 'long-name': isLongName, 'very-long-name': isVeryLongName }]}>
+								{name}
+							</p>
+						</div>
+
+						<div class="card-footer" aria-hidden="true">
+							<span class="stat-pip"></span>
+							<span class="stat-pip filled"></span>
+							<span class="stat-pip"></span>
+						</div>
+					</div>
 				</div>
-
-				<div
-					class="name"
-					class:long-name={isLongName}
-					class:very-long-name={isVeryLongName}
-				>
-					{name.toUpperCase()}
-				</div>
-
-				<!-- badges intentionally omitted on small screens -->
 			</div>
-		</div>
+		{:else}
+			<div class="card-surface card-back" aria-hidden="true">
+				<div class="back-frame">
+					<div class="back-core">
+						<img
+							class="back-art"
+							src={CARD_BACK_IMAGE}
+							alt=""
+							draggable="false"
+							loading="lazy"
+							decoding="async"
+						/>
+					</div>
+				</div>
+			</div>
+		{/if}
 	</div>
 </button>
 
@@ -113,105 +113,170 @@
 		border: 0;
 		background: transparent;
 		cursor: pointer;
-		transform-style: preserve-3d;
 		pointer-events: auto;
 		-webkit-tap-highlight-color: transparent;
 	}
 
-	.card-visual {
-		--flipY: 0deg;
-		--hoverZ: 0px;
+	.card-motion {
 		--hoverScale: 1;
 		position: relative;
 		width: 100%;
 		height: 100%;
-		transform-style: preserve-3d;
 		transition:
-			transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
-			filter 260ms ease;
-		will-change: transform;
-		transform: translateZ(var(--hoverZ)) scale(var(--hoverScale)) rotateY(var(--flipY))
-			rotateX(var(--tiltX)) rotateY(var(--tiltY));
+			transform 320ms cubic-bezier(0.32, 0.72, 0, 1),
+			filter 320ms cubic-bezier(0.32, 0.72, 0, 1);
+		transform: scale(var(--hoverScale));
+		transform-origin: center center;
 	}
 
-	.card-wrapper:hover .card-visual {
-		/* Subtle "float off the board" — only adjust Z/scale */
-		--hoverZ: 40px;
-		--hoverScale: 1.02;
-		filter: drop-shadow(0 30px 40px rgba(0, 0, 0, 0.55));
+	.card-wrapper:hover .card-motion,
+	.card-wrapper:focus-visible .card-motion {
+		--hoverScale: 1.06;
+		filter: drop-shadow(0 12px 20px rgba(8, 16, 40, 0.4));
 	}
 
-	.card-face {
-		position: absolute;
-		inset: 0;
-		border-radius: 18px;
-		backface-visibility: hidden;
-		transform-style: preserve-3d;
+	.card-wrapper:focus-visible {
+		outline: none;
 	}
 
-	.card-back {
-		background:
-			radial-gradient(circle at top left, rgba(255, 157, 0, 0.14), transparent 55%),
-			linear-gradient(180deg, rgba(10, 15, 25, 0.95), rgba(5, 7, 10, 0.95));
-		border: 2px solid rgba(255, 157, 0, 0.35);
-		box-shadow: inset 0 0 0 1px rgba(255, 157, 0, 0.08);
-		transform: rotateY(0deg);
-		overflow: hidden;
-	}
-
-	.back-grid {
-		position: absolute;
-		inset: -40%;
-		background-image:
-			linear-gradient(rgba(255, 157, 0, 0.1) 1px, transparent 1px),
-			linear-gradient(90deg, rgba(255, 157, 0, 0.1) 1px, transparent 1px);
-		background-size: 32px 32px;
-		opacity: 0.25;
-		transform: rotate(20deg);
-	}
-
-	.card-front {
-		/* Nudge forward to avoid z-fighting when hovering/tilting */
-		transform: rotateY(180deg) translateZ(0.5px);
-	}
-
-	.front-border {
-		position: absolute;
-		inset: 0;
-		border-radius: 18px;
-		border: 2px solid var(--border);
-		transform: translateZ(1px);
+	.card-wrapper:focus-visible .frame-outer {
 		box-shadow:
-			0 0 0 1px rgba(255, 157, 0, 0.12),
-			0 0 22px rgba(255, 157, 0, 0.16);
-		opacity: 0.95;
+			0 0 0 3px var(--digi-card-ink),
+			0 0 0 6px var(--digi-gold-hi),
+			0 0 24px rgba(255, 210, 74, 0.45);
 	}
 
-	.front-inner {
+	.card-wrapper.is-selected .card-motion {
+		filter: drop-shadow(0 0 20px rgba(255, 210, 74, 0.35));
+	}
+
+	.card-wrapper.is-revealed:not(.is-correct) .card-motion {
+		filter: grayscale(0.35) brightness(0.85);
+	}
+
+	.card-wrapper.is-face-up .card-motion {
+		animation: card-reveal-pop 420ms cubic-bezier(0.32, 0.72, 0, 1);
+	}
+
+	@keyframes card-reveal-pop {
+		0% {
+			opacity: 0.82;
+		}
+		100% {
+			opacity: 1;
+		}
+	}
+
+	.card-surface {
 		position: absolute;
-		inset: 10px;
+		inset: 0;
 		border-radius: 14px;
-		background: rgba(10, 15, 25, 0.92);
-		border: 1px solid rgba(15, 23, 42, 0.9);
-		transform: translateZ(2px);
-		transform-style: preserve-3d;
+	}
+
+	.back-frame {
+		position: absolute;
+		inset: 0;
+		padding: 5px;
+		border-radius: 14px;
+		background: var(--digi-frame-fill);
+		border: 2px solid var(--digi-frame-border);
+		box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+	}
+
+	.back-core {
+		position: relative;
+		height: 100%;
+		border-radius: 10px;
+		overflow: hidden;
+		background: #0a1630;
+	}
+
+	.back-art {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		object-position: center;
+		display: block;
+		user-select: none;
+		pointer-events: none;
+	}
+
+	.frame-outer {
+		position: absolute;
+		inset: 0;
+		padding: 5px;
+		border-radius: 14px;
+		background: var(--digi-frame-fill);
+		border: 2px solid var(--digi-frame-border);
+		box-shadow:
+			0 0 0 1px rgba(255, 255, 255, 0.18) inset,
+			0 0 20px color-mix(in srgb, var(--frame-accent) 35%, transparent);
+	}
+
+	.frame-inner {
+		position: relative;
+		height: 100%;
+		border-radius: 10px;
+		background: var(--digi-card-paper);
+		box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
 		display: grid;
 		grid-template-rows: 1fr auto auto;
-		gap: 10px;
-		padding: 12px;
-	}
-
-	.art {
-		position: relative;
-		border-radius: 12px;
-		/* background: linear-gradient(135deg, rgba(26, 28, 44, 1), rgba(0, 68, 255, 0.22)); */
-		background: white;
-		border: 1px solid rgba(255, 157, 0, 0.18);
+		gap: 0;
+		padding: 8px;
 		overflow: hidden;
-		/* padding: 12px; */
 	}
 
-	.art img {
+	.card-shortcut {
+		position: absolute;
+		top: 8px;
+		right: 8px;
+		z-index: 3;
+		display: grid;
+		place-items: center;
+		width: clamp(1.25rem, 9%, 1.65rem);
+		aspect-ratio: 1;
+		border-radius: 50%;
+		background: #f0dfbd;
+		color: var(--digi-card-ink);
+		font-family: var(--font-mono);
+		font-size: clamp(0.62rem, 3vw, 0.78rem);
+		font-weight: 700;
+		box-shadow: 0 1px 5px rgba(12, 26, 51, 0.28);
+	}
+
+	.corner {
+		position: absolute;
+		width: 22px;
+		height: 22px;
+		border-radius: 50%;
+		background: var(--digi-gold-mid);
+		border: 2px solid rgba(255, 255, 255, 0.5);
+		box-shadow: 0 2px 6px rgba(139, 94, 18, 0.45);
+		z-index: 2;
+	}
+
+	.corner-tl {
+		top: 6px;
+		left: 6px;
+	}
+
+	.corner-tr {
+		top: 6px;
+		right: 6px;
+	}
+
+	.art-window {
+		position: relative;
+		margin: 4px 4px 0;
+		border-radius: 8px;
+		overflow: hidden;
+		background: #e8eef8;
+		border: 2px solid color-mix(in srgb, var(--frame-accent) 55%, var(--digi-gold-lo));
+		box-shadow: inset 0 2px 8px rgba(12, 26, 51, 0.12);
+		min-height: 0;
+	}
+
+	.art-window img {
 		width: 100%;
 		height: 100%;
 		object-fit: contain;
@@ -220,66 +285,90 @@
 		pointer-events: none;
 	}
 
-	.scanlines {
-		position: absolute;
-		inset: 0;
-		opacity: 0.06;
-		background: repeating-linear-gradient(
-			to bottom,
-			rgba(255, 255, 255, 0.2) 0px,
-			rgba(255, 255, 255, 0.2) 1px,
-			transparent 3px,
-			transparent 7px
-		);
-		mix-blend-mode: overlay;
-		pointer-events: none;
+	.name-band {
+		margin: 8px 4px 4px;
+		padding: 6px 10px;
+		border-radius: 6px;
+		background: var(--digi-card-band);
+		border: 1px solid rgba(255, 210, 74, 0.35);
+		box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
 	}
 
 	.name {
-		font-weight: 900;
-		font-size: 1rem;
-		line-height: 1.05;
-		letter-spacing: -0.03em;
+		margin: 0;
+		font-family: var(--font-display);
+		font-weight: 700;
+		font-size: 0.92rem;
+		line-height: 1.1;
+		letter-spacing: 0.04em;
 		text-align: center;
-		text-wrap: balance;
-		color: white;
-		text-shadow: 0 0 18px rgba(255, 157, 0, 0.18);
+		text-transform: uppercase;
+		color: #f8fafc;
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
 		line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
-		max-height: calc(2 * 1.05em);
+		max-height: calc(2 * 1.1em);
 	}
 
 	.name.long-name {
-		font-size: 0.88rem;
+		font-size: 0.8rem;
 	}
 
 	.name.very-long-name {
-		font-size: 0.78rem;
+		font-size: 0.72rem;
 	}
 
-	.card-visual.is-flipped {
-		--flipY: 180deg;
+	.card-footer {
+		display: flex;
+		justify-content: center;
+		gap: 6px;
+		padding: 6px 4px 2px;
+	}
+
+	.stat-pip {
+		width: 28px;
+		height: 5px;
+		border-radius: 999px;
+		background: var(--digi-card-paper-shadow);
+	}
+
+	.stat-pip.filled {
+		background: var(--digi-gold-mid);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.card-wrapper.is-face-up .card-motion {
+			animation: none;
+		}
+
+		.card-wrapper:hover .card-motion,
+		.card-wrapper:focus-visible .card-motion {
+			--hoverScale: 1;
+		}
 	}
 
 	@media (max-width: 720px) {
-		.front-inner {
-			padding: 10px;
-			gap: 8px;
+		.frame-inner {
+			padding: 6px;
+		}
+
+		.corner {
+			width: 18px;
+			height: 18px;
 		}
 
 		.name {
-			font-size: 0.95rem;
+			font-size: 0.86rem;
 		}
 
 		.name.long-name {
-			font-size: 0.84rem;
+			font-size: 0.76rem;
 		}
 
 		.name.very-long-name {
-			font-size: 0.74rem;
+			font-size: 0.68rem;
 		}
 	}
 </style>
