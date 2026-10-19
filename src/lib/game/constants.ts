@@ -26,10 +26,14 @@ export const SCENE = {
 	}
 } as const;
 
+/** DTCG card back (`static/digimon-card-back.jpg` from Wikimon 2020 backstage design). */
+export const CARD_BACK_IMAGE =
+	import.meta.env.PUBLIC_CARD_BACK_URL ?? '/digimon-card-back.jpg';
+
 export const COLORS = {
-	background: '#05070a',
-	digitalCyan: '#ff9d00',
-	digitalPink: '#ff007a',
-	digitalGold: '#ff9d00',
-	arenaBackground: '#020617'
+	background: '#050a14',
+	digitalCyan: '#ffd24a',
+	digitalPink: '#ff2d7a',
+	digitalGold: '#e6a817',
+	arenaBackground: '#0a1630'
 } as const;

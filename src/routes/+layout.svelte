@@ -35,7 +35,7 @@
 
 	<meta name="description" content={defaultDescription} />
 	<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
-	<meta name="theme-color" content="#0b1220" />
+	<meta name="theme-color" content="#0a1630" />
 
 	<link rel="canonical" href={absoluteUrl(page.url.pathname)} />
 
