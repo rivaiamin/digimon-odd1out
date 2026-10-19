@@ -9,6 +9,7 @@
 	import DigiCardDom from '$lib/components/DigiCardDom.svelte';
 	import HomeTitle from '$lib/components/HomeTitle.svelte';
 	import ShareResultCard from '$lib/components/ShareResultCard.svelte';
+	import PlaymatThemeToggle from '$lib/components/PlaymatThemeToggle.svelte';
 	import {
 		captureShareCard,
 		downloadShareImage,
@@ -24,6 +25,48 @@
 	let shareCaptureEl = $state<HTMLElement | null>(null);
 	let shareCapturing = $state(false);
 	let showLogicLog = $state(false);
+
+	const roundPrompt = $derived.by(() => {
+		if (!game.started) return '';
+		if (game.gameState === 'dealing') return 'The cards are being dealt…';
+		if (game.gameState === 'guessing') {
+			return 'Three share a trait. Find the odd one — press 1–4 or choose a card.';
+		}
+		if (game.gameState === 'revealing' && game.selectedIndex === null) {
+			return 'Time ran out. Study the pattern, then deal again.';
+		}
+		if (game.gameState === 'revealing' && game.puzzle?.answer_index === game.selectedIndex) {
+			return 'Correct pick! The shared trait is revealed below.';
+		}
+		if (game.gameState === 'revealing') {
+			return game.lives > 0
+				? 'Not quite. The gold-framed card is the odd one out.'
+				: 'The round is over. See your score and deal again.';
+		}
+		return '';
+	});
+
+	function handleGameKeydown(event: KeyboardEvent) {
+		if (!/^[1-4]$/.test(event.key)) return;
+		const target = event.target;
+		if (
+			target instanceof HTMLElement &&
+			(target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
+		) {
+			return;
+		}
+		if (
+			!game.started ||
+			game.gameState !== 'guessing' ||
+			game.loading ||
+			showLogicLog ||
+			showSharePreview ||
+			game.puzzleError
+		) {
+			return;
+		}
+		game.handleSelect(Number(event.key) - 1);
+	}
 
 	function openLogicLog(source: 'button' | 'overlay' | 'close' | 'escape') {
 		showLogicLog = source === 'button' ? true : false;
@@ -215,11 +258,16 @@
 		};
 	});
 </script>
+<svelte:window onkeydown={handleGameKeydown} />
 
 <div class="game-root">
 	<!-- Background Theme Elements -->
 	<div class="digital-grid" aria-hidden="true"></div>
 	<div class="glow-orb" aria-hidden="true"></div>
+
+	<div class="theme-anchor">
+		<PlaymatThemeToggle />
+	</div>
 
 	{#if !game.started}
 		<div
@@ -228,16 +276,22 @@
 			aria-modal="true"
 			in:fade={{ duration: 180 }}
 		>
-			<div class="panel home-panel" in:scale={{ start: 0.98, duration: 220, easing: cubicOut }}>
-				<HomeTitle />
-				<p class="home-brief">
-					Four Digimon enter the arena. Three share a hidden trait. One is the anomaly. Identify the
-					odd one out to stabilize the loop.
-				</p>
+			<div
+				class="digi-panel-outer home-panel"
+				in:scale={{ start: 0.98, duration: 220, easing: cubicOut }}
+			>
+				<div class="digi-panel-inner">
+					<p class="digi-eyebrow">Official playmat · puzzle mode</p>
+					<HomeTitle />
+					<p class="home-brief">
+						Four Digimon hit the field. Three share Attribute, Level, Type, or Field — one breaks the
+						rule. Pick the intruder before your memory gauge runs out.
+					</p>
 
-				<button class="start" type="button" onclick={game.startGame}>
-					<span>Start</span>
-				</button>
+					<button class="digi-cta-primary start" type="button" onclick={game.startGame}>
+						<span>Deal the cards</span>
+					</button>
+				</div>
 			</div>
 		</div>
 	{/if}
@@ -250,6 +304,7 @@
 					<DigiCardDom
 						name={card.name}
 						imageUrl={card.imageUrl ?? ''}
+						shortcut={idx + 1}
 						isFlipped={game.isFlipped}
 						isSelected={game.selectedIndex === idx}
 						isCorrect={game.puzzle.answer_index === idx}
@@ -261,6 +316,8 @@
 			{/if}
 		</div>
 	</div>
+
+	<p class="round-prompt" aria-live="polite" aria-atomic="true">{roundPrompt}</p>
 
 	<!-- UI Overlay: Header -->
 	<header class="hud header" class:is-hidden={!game.started}>
@@ -358,17 +415,19 @@
 			out:fade={{ duration: 120 }}
 		>
 			<div
-				class="panel logic-log-panel"
+				class="digi-panel-outer panel logic-log-panel"
 				in:scale={{ start: 0.98, duration: 160, easing: cubicOut }}
 			>
-				<div class="logic-log-head">
-					<p class="log-label">LOGIC_LOG_V2.04</p>
-					<button class="close" type="button" onclick={() => openLogicLog('close')}>Close</button>
+				<div class="digi-panel-inner logic-log-body">
+					<div class="logic-log-head">
+						<p class="log-label">Trait analyzer</p>
+						<button class="close" type="button" onclick={() => openLogicLog('close')}>Close</button>
+					</div>
+					{#if game.gameState === 'revealing' && game.puzzle}
+						<p class="log-connection"><span>Shared trait</span>{game.puzzle.connection}</p>
+					{/if}
+					<p class="log-text">{game.logicText}</p>
 				</div>
-				{#if game.gameState === 'revealing' && game.puzzle}
-					<p class="log-connection"><span>Shared trait</span>{game.puzzle.connection}</p>
-				{/if}
-				<p class="log-text">{game.logicText}</p>
 			</div>
 		</div>
 	{/if}
@@ -390,25 +449,27 @@
 			out:fade={{ duration: 140 }}
 		>
 			<div
-				class="panel puzzle-error-panel"
+				class="digi-panel-outer panel puzzle-error-panel"
 				in:scale={{ start: 0.98, duration: 180, easing: cubicOut }}
 			>
-				<div class="badge puzzle-error-badge" aria-hidden="true">
-					<AlertTriangle class="badge-icon" />
-				</div>
-				<h2 id="puzzle-error-title">SIGNAL LOST</h2>
-				<p id="puzzle-error-desc" class="puzzle-error-message">{game.puzzleError}</p>
-				{#if game.puzzle}
-					<p class="sub">Your last puzzle is still on screen. Retry when you are ready.</p>
-				{/if}
-
-				<div class="puzzle-error-actions">
-					<button class="restart" type="button" onclick={game.fetchNewPuzzle}>
-						<span>Retry sync</span>
-					</button>
+				<div class="digi-panel-inner">
+					<div class="badge puzzle-error-badge" aria-hidden="true">
+						<AlertTriangle class="badge-icon" />
+					</div>
+					<h2 id="puzzle-error-title">Deck sync failed</h2>
+					<p id="puzzle-error-desc" class="puzzle-error-message">{game.puzzleError}</p>
 					{#if game.puzzle}
-						<button class="close" type="button" onclick={game.dismissPuzzleError}> Dismiss </button>
+						<p class="sub">Your last hand is still on the mat. Retry when you are ready.</p>
 					{/if}
+
+					<div class="puzzle-error-actions">
+						<button class="restart" type="button" onclick={game.fetchNewPuzzle}>
+							<span>Shuffle &amp; retry</span>
+						</button>
+						{#if game.puzzle}
+							<button class="close" type="button" onclick={game.dismissPuzzleError}> Dismiss </button>
+						{/if}
+					</div>
 				</div>
 			</div>
 		</div>
@@ -423,12 +484,19 @@
 			in:fade={{ duration: 160 }}
 			out:fade={{ duration: 140 }}
 		>
-			<div class="spinner" aria-hidden="true"></div>
-			<h2>DECRYPTING DATA NODES...</h2>
-			<div class="pulse" aria-hidden="true">
-				<span></span>
-				<span></span>
-				<span></span>
+			<div
+				class="digi-panel-outer loading-panel"
+				in:scale={{ start: 0.98, duration: 160, easing: cubicOut }}
+			>
+				<div class="digi-panel-inner loading-body">
+					<div class="spinner" aria-hidden="true"></div>
+					<h2>Shuffling the deck…</h2>
+					<div class="pulse" aria-hidden="true">
+						<span></span>
+						<span></span>
+						<span></span>
+					</div>
+				</div>
 			</div>
 		</div>
 	{/if}
@@ -442,26 +510,28 @@
 			in:fade={{ duration: 180 }}
 			out:fade={{ duration: 120 }}
 		>
-			<div class="panel" in:scale={{ start: 0.98, duration: 200, easing: cubicOut }}>
-				<div class="badge" aria-hidden="true">
-					<RefreshCw class="badge-icon" />
-				</div>
-				<h2>NETWORK<br />COLLAPSE</h2>
-				<p class="sub">Critical system failure detected</p>
+			<div class="digi-panel-outer panel gameover-shell" in:scale={{ start: 0.98, duration: 200, easing: cubicOut }}>
+				<div class="digi-panel-inner">
+					<div class="badge" aria-hidden="true">
+						<RefreshCw class="badge-icon" />
+					</div>
+					<h2>Match<br />over</h2>
+					<p class="sub">Memory gauge depleted</p>
 
-				<div class="result">
-					<p class="result-label">Cycle Potential Result</p>
-					<p class="result-score">{game.score}</p>
-				</div>
+					<div class="result">
+						<p class="result-label">Final synchro score</p>
+						<p class="result-score">{game.score}</p>
+					</div>
 
-				<div class="gameover-actions">
-					<button class="share-open" type="button" onclick={openSharePreview}>
-						<Share2 class="share-open-icon" aria-hidden="true" />
-						<span>Share Result</span>
-					</button>
-					<button class="restart" type="button" onclick={game.restartGame}>
-						<span>Initialize Reboot</span>
-					</button>
+					<div class="gameover-actions">
+						<button class="share-open" type="button" onclick={openSharePreview}>
+							<Share2 class="share-open-icon" aria-hidden="true" />
+							<span>Share Result</span>
+						</button>
+						<button class="restart" type="button" onclick={game.restartGame}>
+							<span>Deal again</span>
+						</button>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -484,47 +554,49 @@
 			out:fade={{ duration: 120 }}
 		>
 			<div
-				class="panel share-preview-panel digi-scrollbar"
+				class="digi-panel-outer panel share-preview-panel"
 				in:scale={{ start: 0.98, duration: 180, easing: cubicOut }}
 			>
-				<div class="share-preview-head">
-					<h2 id="share-preview-title">Share your run</h2>
-					<button class="close" type="button" onclick={closeSharePreview} disabled={shareBusy}>
-						Close
-					</button>
-				</div>
-				<p class="share-preview-hint">
-					This is what others will see. On desktop, Save image downloads a PNG; Share may also open
-					a link share dialog.
-				</p>
-
-				{#if shareMessage}
-					<p class="share-status" role="status" aria-live="polite">{shareMessage}</p>
-				{/if}
-
-				<div class="share-preview-frame" aria-hidden={shareBusy}>
-					<div class="share-preview-scaler">
-						<ShareResultCard score={game.score} {playUrl} />
+				<div class="digi-panel-inner share-preview-body digi-scrollbar">
+					<div class="share-preview-head">
+						<h2 id="share-preview-title">Share your run</h2>
+						<button class="close" type="button" onclick={closeSharePreview} disabled={shareBusy}>
+							Close
+						</button>
 					</div>
-				</div>
+					<p class="share-preview-hint">
+						This is what others will see. On desktop, Save image downloads a PNG; Share may also open
+						a link share dialog.
+					</p>
 
-				<div class="share-preview-actions">
-					<button
-						class="restart"
-						type="button"
-						disabled={shareBusy}
-						onclick={() => exportShareImage('share')}
-					>
-						<span>{shareBusy ? 'Preparing…' : 'Share image'}</span>
-					</button>
-					<button
-						class="share-save"
-						type="button"
-						disabled={shareBusy}
-						onclick={() => exportShareImage('download')}
-					>
-						<span>Save image</span>
-					</button>
+					{#if shareMessage}
+						<p class="share-status" role="status" aria-live="polite">{shareMessage}</p>
+					{/if}
+
+					<div class="share-preview-frame" aria-hidden={shareBusy}>
+						<div class="share-preview-scaler">
+							<ShareResultCard score={game.score} {playUrl} />
+						</div>
+					</div>
+
+					<div class="share-preview-actions">
+						<button
+							class="restart"
+							type="button"
+							disabled={shareBusy}
+							onclick={() => exportShareImage('share')}
+						>
+							<span>{shareBusy ? 'Preparing…' : 'Share image'}</span>
+						</button>
+						<button
+							class="share-save"
+							type="button"
+							disabled={shareBusy}
+							onclick={() => exportShareImage('download')}
+						>
+							<span>Save image</span>
+						</button>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -539,15 +611,17 @@
 
 	{#if game.started && isMobile && isPortrait}
 		<div class="overlay rotate" role="dialog" aria-modal="true">
-			<div class="panel rotate-panel" in:scale={{ start: 0.98, duration: 180, easing: cubicOut }}>
-				<h2>ROTATE DEVICE</h2>
-				<p class="sub">This game is best experienced in landscape.</p>
+			<div class="digi-panel-outer panel rotate-panel" in:scale={{ start: 0.98, duration: 180, easing: cubicOut }}>
+				<div class="digi-panel-inner">
+					<h2>Rotate device</h2>
+					<p class="sub">Landscape fits the playmat best.</p>
 
-				<div class="rotate-actions">
-					<button class="restart" type="button" onclick={requestFullscreenLandscape}>
-						<span>Go Fullscreen</span>
-					</button>
-					<p class="rotate-hint">If fullscreen is blocked, just rotate your device.</p>
+					<div class="rotate-actions">
+						<button class="restart" type="button" onclick={requestFullscreenLandscape}>
+							<span>Go Fullscreen</span>
+						</button>
+						<p class="rotate-hint">If fullscreen is blocked, just rotate your device.</p>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -561,7 +635,16 @@
 		height: 100%;
 		overflow: hidden;
 		user-select: none;
-		background: #05070a;
+		background: var(--digi-playmat-0);
+	}
+
+	.theme-anchor {
+		position: fixed;
+		top: max(1rem, env(safe-area-inset-top, 0px));
+		right: max(1.25rem, env(safe-area-inset-right, 0px));
+		z-index: 30;
+		max-width: min(12rem, calc(100vw - 2.5rem));
+		overflow: hidden;
 	}
 
 	/* Theme effect classes are global in `src/routes/layout.css` */
@@ -606,21 +689,44 @@
 	}
 
 	.title h1 {
+		font-family: var(--font-display);
 		font-size: clamp(2rem, 3.6vw, 3.25rem);
-		font-weight: 900;
-		font-style: italic;
-		letter-spacing: -0.04em;
-		color: white;
-		text-decoration: underline;
-		text-decoration-color: #ff9d00;
-		text-decoration-thickness: 4px;
-		text-underline-offset: 10px;
+		font-weight: 700;
+		font-style: normal;
+		letter-spacing: 0.04em;
+		color: var(--digi-text);
+		text-shadow: 0 2px 24px rgba(255, 210, 74, 0.25);
 	}
 
 	.stats {
 		display: flex;
 		gap: 3rem;
 		pointer-events: auto;
+	}
+
+	.round-prompt {
+		position: absolute;
+		inset-inline: 1rem;
+		bottom: clamp(5.5rem, 12vh, 8rem);
+		z-index: 15;
+		width: fit-content;
+		max-width: min(42rem, calc(100vw - 2rem));
+		margin: 0 auto;
+		padding: 0.65rem 1.1rem;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--digi-playmat-1) 78%, transparent);
+		box-shadow:
+			inset 0 1px 0 rgba(255, 255, 255, 0.12),
+			0 8px 24px -12px rgba(0, 0, 0, 0.35);
+		color: var(--digi-text);
+		font-size: clamp(0.72rem, 1.8vw, 0.92rem);
+		font-weight: 600;
+		letter-spacing: 0.025em;
+		text-align: center;
+		pointer-events: none;
+		transition:
+			opacity 260ms cubic-bezier(0.32, 0.72, 0, 1),
+			transform 260ms cubic-bezier(0.32, 0.72, 0, 1);
 	}
 
 	.label {
@@ -630,7 +736,7 @@
 		font-size: 10px;
 		letter-spacing: 0.18em;
 		text-transform: uppercase;
-		color: rgb(100 116 139);
+		color: var(--digi-text-muted);
 		margin-bottom: 0.25rem;
 		text-align: right;
 	}
@@ -649,8 +755,8 @@
 	}
 
 	.bar.is-on {
-		background: #ff007a;
-		box-shadow: 0 0 10px rgba(255, 0, 122, 0.6);
+		background: var(--digi-energy);
+		box-shadow: 0 0 12px rgba(255, 45, 122, 0.45);
 	}
 
 	.stat.timer:not(.is-active) .timer-value {
@@ -658,8 +764,8 @@
 	}
 
 	.stat.timer.is-active .timer-value {
-		color: #ff9d00;
-		text-shadow: 0 0 12px rgba(255, 157, 0, 0.35);
+		color: var(--digi-sync);
+		text-shadow: 0 0 14px rgba(255, 210, 74, 0.35);
 	}
 
 	.timer-value {
@@ -693,15 +799,15 @@
 	.timer-fill {
 		height: 100%;
 		border-radius: 999px;
-		background: linear-gradient(90deg, #ff9d00, #ffc04d);
-		transition: width 80ms linear;
+		background: var(--digi-gold-mid);
+		transition: width 80ms cubic-bezier(0.32, 0.72, 0, 1);
 	}
 
 	.value {
 		font-size: 2rem;
 		font-weight: 800;
 		letter-spacing: -0.02em;
-		color: #ff9d00;
+		color: var(--digi-sync);
 		text-align: right;
 		font-variant-numeric: tabular-nums;
 	}
@@ -726,7 +832,7 @@
 		font-size: 10px;
 		letter-spacing: 0.3em;
 		text-transform: uppercase;
-		color: #ff9d00;
+		color: var(--digi-sync);
 		margin-bottom: 0.75rem;
 	}
 
@@ -793,7 +899,7 @@
 	}
 
 	.next {
-		background: #ff9d00;
+		background: var(--digi-sync);
 		color: black;
 		font-weight: 900;
 		padding: 0.85rem 3rem;
@@ -829,7 +935,7 @@
 	}
 
 	.sync-bar.on {
-		background: #ff9d00;
+		background: var(--digi-sync);
 		box-shadow: 0 0 8px rgba(255, 157, 0, 0.4);
 	}
 
@@ -844,17 +950,21 @@
 	}
 
 	.logic-log {
-		background: rgba(5, 7, 10, 0.82);
+		background: rgba(5, 10, 22, 0.82);
 		backdrop-filter: blur(18px);
 	}
 
 	.logic-log-panel {
 		max-width: min(760px, 100%);
 		width: 100%;
+	}
+
+	.logic-log-body {
 		max-height: min(82vh, 34rem);
 		overflow-y: auto;
 		overscroll-behavior: contain;
 		-webkit-overflow-scrolling: touch;
+		text-align: left;
 	}
 
 	.logic-log-head {
@@ -895,7 +1005,7 @@
 
 	.home {
 		z-index: 90;
-		background: rgba(5, 7, 10, 0.92);
+		background: var(--digi-overlay-heavy);
 		backdrop-filter: blur(28px);
 		overflow-x: hidden;
 		overflow-y: auto;
@@ -909,11 +1019,15 @@
 	}
 
 	.home-panel {
-		max-width: 720px;
+		max-width: min(720px, 100%);
 		width: 100%;
 		text-align: center;
 		margin-block: auto;
 		flex-shrink: 0;
+	}
+
+	.home-panel .digi-panel-inner {
+		text-align: center;
 	}
 
 	.home-brief {
@@ -922,56 +1036,38 @@
 		font-size: clamp(1rem, 1.7vw, 1.15rem);
 		line-height: 1.7;
 		font-weight: 650;
-		color: rgb(148 163 184);
+		color: var(--digi-text-soft);
 	}
 
 	.start {
-		width: min(480px, 100%);
-		padding: 1.25rem 1rem;
-		background: #ff9d00;
-		color: black;
-		font-weight: 900;
-		font-size: 1.25rem;
-		border-radius: 16px;
-		transform: skewX(-12deg);
-		cursor: pointer;
-		transition:
-			transform 120ms ease,
-			background-color 180ms ease;
-		box-shadow: 0 20px 40px -10px rgba(255, 157, 0, 0.4);
-		pointer-events: auto;
-	}
-
-	.start:hover {
-		background: white;
-	}
-
-	.start:active {
-		transform: skewX(-12deg) scale(0.98);
-	}
-
-	.start span {
-		display: block;
-		transform: skewX(12deg);
-		text-transform: uppercase;
-		letter-spacing: -0.02em;
+		margin-inline: auto;
 	}
 
 	.loading {
-		background: rgba(5, 7, 10, 0.9);
+		background: var(--digi-overlay);
 		backdrop-filter: blur(24px);
+	}
+
+	.loading-panel {
+		max-width: min(420px, 100%);
+		width: 100%;
+	}
+
+	.loading-body {
+		display: flex;
 		flex-direction: column;
+		align-items: center;
 		text-align: center;
 	}
 
 	.puzzle-error {
 		z-index: 85;
-		background: rgba(5, 7, 10, 0.72);
+		background: rgba(5, 10, 22, 0.72);
 		backdrop-filter: blur(20px);
 	}
 
 	.puzzle-error.is-blocking {
-		background: rgba(5, 7, 10, 0.92);
+		background: rgba(5, 10, 22, 0.92);
 		backdrop-filter: blur(28px);
 	}
 
@@ -983,23 +1079,19 @@
 	.puzzle-error-badge {
 		border-color: rgba(255, 0, 122, 0.45);
 		background: rgba(255, 0, 122, 0.12);
-		color: #ff007a;
+		color: var(--digi-energy);
 	}
 
 	.puzzle-error-panel h2 {
 		margin: 0 0 0.75rem;
 		font-size: clamp(1.85rem, 4vw, 2.5rem);
-		font-weight: 900;
-		font-style: italic;
-		letter-spacing: -0.03em;
-		color: white;
 	}
 
 	.puzzle-error-message {
 		margin: 0 0 0.75rem;
 		font-size: 1rem;
 		line-height: 1.55;
-		color: rgb(226 232 240);
+		color: var(--digi-text);
 	}
 
 	.puzzle-error-panel .sub {
@@ -1015,7 +1107,7 @@
 		width: 80px;
 		height: 80px;
 		border-radius: 999px;
-		border: 4px solid #ff9d00;
+		border: 4px solid var(--digi-sync);
 		border-top-color: transparent;
 		animation: spin 1s linear infinite;
 		margin-bottom: 2rem;
@@ -1038,7 +1130,7 @@
 	.pulse span {
 		width: 48px;
 		height: 4px;
-		background: #ff9d00;
+		background: var(--digi-sync);
 		animation: pulse 900ms ease-in-out infinite;
 	}
 
@@ -1051,13 +1143,13 @@
 
 	.gameover {
 		z-index: 100;
-		background: rgba(5, 7, 10, 0.95);
+		background: rgba(5, 10, 22, 0.95);
 		backdrop-filter: blur(36px);
 	}
 
 	.rotate {
 		z-index: 110;
-		background: rgba(5, 7, 10, 0.95);
+		background: rgba(5, 10, 22, 0.95);
 		backdrop-filter: blur(36px);
 	}
 
@@ -1096,7 +1188,7 @@
 		display: grid;
 		place-items: center;
 		border-radius: 24px;
-		background: #ff007a;
+		background: var(--digi-energy);
 		color: white;
 		font-weight: 900;
 		transform: skewX(-12deg);
@@ -1109,12 +1201,14 @@
 		transform: skewX(12deg);
 	}
 
-	.panel h2 {
+	.panel h2,
+	.loading-body h2 {
+		font-family: var(--font-display);
 		font-size: clamp(3rem, 6vw, 4.5rem);
-		font-weight: 900;
-		font-style: italic;
-		letter-spacing: -0.05em;
-		color: white;
+		font-weight: 700;
+		font-style: normal;
+		letter-spacing: 0.02em;
+		color: var(--digi-text);
 		line-height: 0.9;
 	}
 
@@ -1127,16 +1221,22 @@
 		font-size: 10px;
 		letter-spacing: 0.4em;
 		text-transform: uppercase;
-		color: rgb(100 116 139);
+		color: var(--digi-text-muted);
+	}
+
+	.gameover-shell,
+	.puzzle-error-panel,
+	.rotate-panel {
+		max-width: min(540px, 100%);
+		width: 100%;
 	}
 
 	.result {
-		background: rgba(15, 23, 42, 0.5);
-		border: 1px solid rgb(30 41 59);
-		border-radius: 24px;
+		background: rgba(255, 210, 74, 0.08);
+		border: 1px solid rgba(255, 210, 74, 0.28);
+		border-radius: 1.25rem;
 		padding: 2rem;
-		transform: skewX(-12deg);
-		margin-bottom: 3rem;
+		margin-bottom: 2rem;
 	}
 
 	.result-label {
@@ -1144,24 +1244,22 @@
 		text-transform: uppercase;
 		font-size: 12px;
 		letter-spacing: 0.2em;
-		color: rgb(100 116 139);
+		color: var(--digi-text-muted);
 		margin-bottom: 0.5rem;
-		transform: skewX(12deg);
 	}
 
 	.result-score {
 		font-size: 4rem;
 		font-weight: 900;
-		letter-spacing: -0.05em;
-		color: #ff9d00;
+		letter-spacing: -0.03em;
+		color: var(--digi-sync);
 		font-variant-numeric: tabular-nums;
-		transform: skewX(12deg);
 	}
 
 	.restart {
 		width: 100%;
 		padding: 1.25rem 1rem;
-		background: #ff9d00;
+		background: var(--digi-sync);
 		color: black;
 		font-weight: 900;
 		font-size: 1.25rem;
@@ -1202,7 +1300,7 @@
 		border-radius: 16px;
 		border: 2px solid rgba(255, 157, 0, 0.45);
 		background: rgba(255, 157, 0, 0.08);
-		color: #ff9d00;
+		color: var(--digi-sync);
 		font-weight: 900;
 		font-size: 1rem;
 		transform: skewX(-12deg);
@@ -1220,7 +1318,7 @@
 
 	.share-open:hover {
 		background: rgba(255, 157, 0, 0.16);
-		border-color: #ff9d00;
+		border-color: var(--digi-sync);
 	}
 
 	.share-open:active {
@@ -1242,12 +1340,16 @@
 
 	.share-preview {
 		z-index: 105;
-		background: rgba(5, 7, 10, 0.94);
+		background: rgba(5, 10, 22, 0.94);
 		backdrop-filter: blur(28px);
 	}
 
 	.share-preview-panel {
 		max-width: min(520px, 100%);
+		width: 100%;
+	}
+
+	.share-preview-body {
 		max-height: min(92vh, 900px);
 		overflow-y: auto;
 		text-align: left;
@@ -1263,18 +1365,18 @@
 
 	.share-preview-head h2 {
 		margin: 0;
+		font-family: var(--font-display);
 		font-size: clamp(1.5rem, 4vw, 2rem);
-		font-weight: 900;
-		font-style: italic;
-		color: white;
-		letter-spacing: -0.03em;
+		font-weight: 700;
+		color: var(--digi-text);
+		letter-spacing: 0.02em;
 	}
 
 	.share-preview-hint {
 		margin: 0 0 0.75rem;
 		font-size: 0.95rem;
 		line-height: 1.5;
-		color: rgb(148 163 184);
+		color: var(--digi-text-soft);
 	}
 
 	.share-status {
@@ -1448,6 +1550,13 @@
 			top: 1.5rem;
 			right: 1.25rem;
 			text-align: right;
+			padding-right: 0;
+		}
+
+		.theme-anchor {
+			top: max(1rem, env(safe-area-inset-top, 0px));
+			left: 1.25rem;
+			right: auto;
 		}
 		.stat.score .label {
 			display: none;
@@ -1500,7 +1609,7 @@
 			padding: 0.75rem;
 		}
 
-		.gameover .panel {
+		.gameover .gameover-shell {
 			max-width: min(720px, 100%);
 			display: grid;
 			grid-template-columns: 64px 1fr;
@@ -1525,14 +1634,14 @@
 			height: 32px;
 		}
 
-		.gameover .panel h2 {
+		.gameover .gameover-shell h2 {
 			grid-column: 2;
 			margin: 0;
 			font-size: clamp(1.85rem, 4.8vw, 2.5rem);
 			line-height: 0.95;
 		}
 
-		.gameover .panel h2 br {
+		.gameover .gameover-shell h2 br {
 			display: none;
 		}
 

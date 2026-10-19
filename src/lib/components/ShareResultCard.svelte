@@ -59,33 +59,21 @@
 		align-items: center;
 		text-align: center;
 		overflow: hidden;
-		background: #05070a;
-		color: #e2e8f0;
+		background: #0a1630;
+		color: #e8eef8;
 		font-family: 'Outfit', ui-sans-serif, system-ui, sans-serif;
 	}
 
 	.bg-grid {
 		position: absolute;
 		inset: 0;
-		opacity: 0.45;
-		background-image:
-			linear-gradient(rgba(255, 157, 0, 0.08) 1px, transparent 1px),
-			linear-gradient(90deg, rgba(255, 157, 0, 0.08) 1px, transparent 1px);
-		background-size: 64px 64px;
+		opacity: 0.12;
+		background-color: #122a5c;
 		pointer-events: none;
 	}
 
 	.bg-glow {
-		position: absolute;
-		left: 50%;
-		top: 42%;
-		width: 720px;
-		height: 720px;
-		transform: translate(-50%, -50%);
-		background:
-			radial-gradient(circle at center, rgba(255, 157, 0, 0.2), transparent 62%),
-			radial-gradient(circle at 28% 58%, rgba(255, 0, 122, 0.14), transparent 55%);
-		pointer-events: none;
+		display: none;
 	}
 
 	.brand {
@@ -138,33 +126,42 @@
 	}
 
 	.mini-card {
+		position: relative;
 		width: 132px;
 		height: 188px;
-		border-radius: 18px;
-		border: 3px solid rgba(255, 157, 0, 0.35);
-		background: linear-gradient(160deg, rgba(15, 23, 42, 0.95), rgba(2, 6, 23, 0.98));
-		box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+		border-radius: 14px;
+		padding: 5px;
+		background: #e6a817;
+		border: 2px solid #ffe566;
+		box-shadow: 0 18px 40px rgba(5, 10, 22, 0.55);
 		display: grid;
 		place-items: center;
-		transform: skewX(-10deg);
+	}
+
+	.mini-card::before {
+		content: '';
+		position: absolute;
+		inset: 5px;
+		border-radius: 10px;
+		background: #f6f3eb;
 	}
 
 	.mini-card.odd {
-		border-color: rgba(255, 0, 122, 0.75);
 		box-shadow:
-			0 0 28px rgba(255, 0, 122, 0.35),
-			0 18px 40px rgba(0, 0, 0, 0.45);
+			0 0 28px rgba(255, 45, 122, 0.35),
+			0 18px 40px rgba(5, 10, 22, 0.55);
 	}
 
 	.mini-card-mark {
-		transform: skewX(10deg);
+		position: relative;
+		z-index: 1;
 		font-size: 40px;
 		font-weight: 900;
-		color: #ff9d00;
+		color: #e6a817;
 	}
 
 	.mini-card.odd .mini-card-mark {
-		color: #ff007a;
+		color: #ff2d7a;
 	}
 
 	.score-block {

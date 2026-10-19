@@ -275,7 +275,7 @@
 		width: 120px;
 		transform: rotate(-90deg);
 		transform-origin: center;
-		accent-color: #ff9d00;
+		accent-color: #e6a817;
 		touch-action: none;
 	}
 

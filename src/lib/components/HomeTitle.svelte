@@ -84,16 +84,18 @@
 	.home-subtitle {
 		margin: 0;
 		font-size: clamp(0.72rem, 1.4vw, 0.85rem);
-		font-weight: 300;
+		font-weight: 500;
 		letter-spacing: 0.38em;
 		text-transform: uppercase;
-		color: #f7f7fb;
+		color: var(--digi-text-soft);
 	}
 
 	.home-subtitle-box {
 		display: inline-block;
 		padding: 0.45rem 1.1rem;
-		border: 1px solid var(--color-digital-cyan, #ff9d00);
+		border-radius: 999px;
+		border: 1px solid rgba(255, 210, 74, 0.45);
+		background: rgba(255, 210, 74, 0.08);
 	}
 
 	.home-subtitle-text {
@@ -121,10 +123,11 @@
 
 	.home-title {
 		margin: 0;
+		font-family: var(--font-display);
 		font-size: clamp(2.4rem, 5.5vw, 4.25rem);
-		font-weight: 900;
+		font-weight: 700;
 		font-style: normal;
-		letter-spacing: -0.04em;
+		letter-spacing: 0.02em;
 		line-height: 1;
 		text-transform: uppercase;
 	}
@@ -132,8 +135,12 @@
 	.home-title-block {
 		display: inline-block;
 		padding: 0.35rem 1.15rem 0.45rem;
-		background: var(--color-digital-cyan, #ff9d00);
-		color: #05070a;
-		box-shadow: 0 12px 32px -8px rgba(255, 157, 0, 0.45);
+		background: var(--digi-gold-mid);
+		border: 2px solid var(--digi-gold-hi);
+		color: var(--digi-card-ink);
+		border-radius: 0.5rem;
+		box-shadow:
+			0 12px 32px -8px rgba(230, 168, 23, 0.45),
+			inset 0 1px 0 rgba(255, 255, 255, 0.45);
 	}
 </style>
